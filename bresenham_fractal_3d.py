@@ -1,59 +1,75 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import random as random
+import matplotlib.colors
+
+
+### Configuration Options ##
+DEPTH = 1                                                         # Fractal depth
+BRANCHING_RATIO = [0.8, 0.6, 0.8, 0.6]                              # Length ratio bw parent and daugther branch
+BRANCHING_POLAR = [np.pi/4, -np.pi/4, 3*np.pi/4, 5*np.pi/4, ]       # Polar angles
+BRANCHING_AZIMUTHAL = [np.pi/3, np.pi/6, np.pi/6, np.pi/3]          # Azimuthal angles
+
+ROOT_START = [0,0,0]                                                # Start of root
+ROOT_END = [0,0,100]                                                # End of root
+THICKNESS_ROOT = 4                                                  # Thickness of the root
+MIN_THICKNESS_BRANCH = 2                                            # Minimum thickness of the branch
+
+THICKNESS_RATIO = 0.8                                               # Thickness ratio bw parent and daugther branch     
+DOMAIN_DIMENSIONS = [500, 500, 500]                                 # Dimensions of the domain 
+DOMAIN_PIXELS = [120, 120, 120]                                     # Number of pixels in binary domain            
+
+RANDOM_MODE = False                                                 # Boolean for random fractal
+SEED = 412                                                          # Seed for random fractal generation
+ANGLE_VARIATION_POLAR = np.pi/8                                     # Maximum deviation in polar angles
+ANGLE_VARIATION_AZIMUTHAL = np.pi/8                                 # Maximum deviation in azimuthal angles
+BRANCHING_VARIATION = 0.1                                           # Maximum deviation in branching ratio
+THICKNESS_VARIATION = 2                                            # Maximum deviation in thickness
+
+random.seed(SEED)
 
 def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
 
-    ''' ================= VARIABLE DEFINITIONS =================
-                x1, y1 - the initial coordinates
-                x2, y2 - the final coordinates
-                th - the thickness of the line
-                matrix - matrix for coordinates                '''
-
     # Rounding all coordinates to nearest integer 
-    
-    x2 = int(round(x2))
-    x1 = int(round(x1))
-    y2 = int(round(y2))
-    y1 = int(round(y1))
-    z1 = int(round(z1))
-    z2 = int(round(z2))
+    x1, x2 =int(round(x1)), int(round(x2))
+    y1, y2 =int(round(y1)), int(round(y2))
+    z1, z2 =int(round(z1)), int(round(z2))
 
     # Calculating the differences between the two coordinates
-    xdif = x2-x1
-    ydif = y2-y1
-    zdif = z2-z1
+    xdif, ydif, zdif = x2-x1, y2-y1, z2-z1
     
     # Absolute values of differences
-    dx = abs(x2-x1)
-    dy = abs(y2-y1)
-    dz = abs(z2-z1)
+    dx,dy, dz = abs(x2-x1), abs(y2-y1), abs(z2-z1)
 
     # Setting signs of increments in x, y and z - direction
     xs = 1 if xdif > 0 else -1
     ys = 1 if ydif > 0 else -1
     zs = 1 if zdif > 0 else -1
 
-    dx_2 = 2*dx
-    dy_2 = 2*dy
-    dz_2 = 2*dz
+    dx_2,dy_2,dz_2 = 2*dx,2*dy,2*dz
 
-    min_thick = 1
+    if RANDOM_MODE == True:
+        th += random.uniform(-1,1)*THICKNESS_VARIATION
+        th = int(th)
 
-    # lägg till case dx = 0 dy = 0 men dz != 0 etc
     # Case I: dx > dy and dx > dz
     if (dx >= dy and dx >= dz): 
             p1 = dy_2 - dx
             p2 = dz_2- dx
             while (x1 != x2):
-
-                if th == 1:
-                    matrix[y1][x1][z1] = 1
+                
+                if y1 >= DOMAIN_PIXELS[1] or z1 >= DOMAIN_PIXELS[2] or x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 < 0 or z1 < 0:
+                        print("Error. Coordinate out of bounds.")
+                        continue
                 else:
-                    for y_th in range(0, 2*th+1):
-                        max_t_z = max(int(np.sqrt(th**2-(y_th-th)**2)), min_thick)
-                        for z_th in range(0,2*max_t_z+1):
-                            matrix[y1-th+y_th][x1][z1-max_t_z+z_th] = 1
+                    if th == 1:
+                        matrix[y1][x1][z1] = 1
+                    else:
+                        for y_th in range(0, 2*th+1):
+                            max_t_z = max(int(np.sqrt(th**2-(y_th-th)**2)), MIN_THICKNESS_BRANCH)
+                            for z_th in range(0,2*max_t_z+1):
+                                matrix[y1-th+y_th][x1][z1-max_t_z+z_th] = 1
 
                 
                 if (p1 >= 0):
@@ -72,13 +88,18 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
             p1 = dx_2 - dy
             p2 = dz_2- dy
             while (y1 != y2):
-                if th == 1:
-                    matrix[y1][x1][z1] = 1
+                 
+                if y1 >= DOMAIN_PIXELS[1] or z1 >= DOMAIN_PIXELS[2] or x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 < 0 or z1 < 0:
+                        print("Error. Coordinate out of bounds.")
+                        continue
                 else:
-                    for x_th in range(0, 2*th+1):
-                        max_t_z = max(int(np.sqrt(th**2-(x_th-th)**2)), min_thick)
-                        for z_th in range(0,2*max_t_z+1):
-                            matrix[y1][x1-th+x_th][z1-max_t_z+z_th] = 1
+                    if th == 1:
+                        matrix[y1][x1][z1] = 1
+                    else:
+                        for x_th in range(0, 2*th+1):
+                            max_t_z = max(int(np.sqrt(th**2-(x_th-th)**2)), MIN_THICKNESS_BRANCH)
+                            for z_th in range(0,2*max_t_z+1):
+                                matrix[y1][x1-th+x_th][z1-max_t_z+z_th] = 1
                 if (p1 >= 0):
                     x1 += xs
                     p1 -= dy_2
@@ -94,13 +115,17 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
         p1 = dy_2 - dz
         p2 = dx_2- dz
         while (z1 != z2):
-            if th == 1:
-                 matrix[y1][x1][z1] = 1
+            if y1 >= DOMAIN_PIXELS[1] or z1 >= DOMAIN_PIXELS[2] or x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 < 0 or z1 < 0:
+                        print("Error. Coordinate out of bounds.")
+                        continue
             else:
-                for x_th in range(0, 2*th+1):
-                    max_t_y = max(int(np.sqrt(th**2-(x_th-th)**2)), min_thick)
-                    for y_th in range(0,2*max_t_y+1):
-                        matrix[y1-max_t_y + y_th][x1-th+x_th][z1] = 1
+                if th == 1:
+                    matrix[y1][x1][z1] = 1
+                else:
+                    for x_th in range(0, 2*th+1):
+                        max_t_y = max(int(np.sqrt(th**2-(x_th-th)**2)), MIN_THICKNESS_BRANCH)
+                        for y_th in range(0,2*max_t_y+1):
+                            matrix[y1-max_t_y + y_th][x1-th+x_th][z1] = 1
             if (p1 >= 0):
                 y1 += ys
                 p1 -= dz_2
@@ -113,35 +138,7 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
 
     return matrix
 
-    # non uniformity? removing branches after shuffling?
-    # adding a minimum thickness?
-    # FIX RETURN ERROR IF INDEX OUT OF BOUNDS
-
-def FraktalT(n, r, phi, chi, xb, yb, zb, t, tr, dim, pixels):
-
-    ''' ================= VARIABLE DEFINITIONS =================
-                        n - number of iterations
-
-             r - scale factor (different scale-factors take                    
-            place, r may be vector in this case the lengths 
-                    of r and phi must be equal)
-
-        phi - vector of angles in fractal generator (calculated 
-        relative to the horizontal axis connecting end points 
-                            of generator)
-        chi - vector of polar angles in fractal generator (calculated 
-        relative to the horizontal axis connecting end points 
-                            of generator)
-    
-                 xb,yb and zb - start and end coordinates of trunk 
-                        t - radius of root in mm
-
-        tr - scale factor for thickness (different scale factors 
-             can take place BUT lengths must mach with 
-                         lengths of r and phi)
-
-            dim - dimensions of domain in mm 
-            pixels - number of pixels along x and y axis        '''
+def FraktalT(n, r, phi, chi, xb, yb, zb, t, tr, dim, pixels, rnd_phi, rnd_chi, rnd_branch):
 
     # Calculating voxel size given pixel and domain size 
     delta_x = dim[0]/pixels[1]
@@ -173,61 +170,84 @@ def FraktalT(n, r, phi, chi, xb, yb, zb, t, tr, dim, pixels):
     A[1,:,2]  =  np.ones((1,mN**n))*zb[1]/delta_z
 
     NC = np.zeros((3, mN))
-    for i in range(1, n):
-        z = 0
-        for j in range(0, mN**(i - 1)):
-            for k in range(0, mN):
-                for m in range(0, mN**(n - i)):
+    if RANDOM_MODE == False:
+        for i in range(1, n):
+            z = 0
+            for j in range(0, mN**(i - 1)):
+                for k in range(0, mN):
+                    for m in range(0, mN**(n - i)):
 
-                    a = np.sqrt((A[i - 1, z, 0] - A[i, z, 0])**2 + (A[i - 1, z, 1] - A[i, z, 1])**2 + (A[i - 1, z, 2] - A[i, z, 2])**2)
-                    b = np.sqrt((A[i, z, 0] - A[i - 1, z, 0])**2 + (A[i, z, 1] - A[i - 1, z, 1])**2)
-                    theta1 = np.arccos((A[i, z, 2] - A[i - 1, z, 2]) / a)
+                        a = np.sqrt((A[i - 1, z, 0] - A[i, z, 0])**2 
+                                    + (A[i - 1, z, 1] - A[i, z, 1])**2 +
+                                    (A[i - 1, z, 2] - A[i, z, 2])**2)
+    
+                        x2 = a * rM[k] * np.sin(chi[k]) * np.cos(phi[k])
+                        y2 = a * rM[k] * np.sin(chi[k]) * np.sin(phi[k])
+                        z2 = a * rM[k] * np.cos(chi[k])
 
-                    if A[i, z, 0] == A[i - 1, z, 0] and A[i, z, 1] == A[i - 1, z, 1]:
-                        k2 = 0
-                        k1 = 1
-                    else:
-                        k2 = (A[i, z, 1] - A[i - 1, z, 1]) / b
-                        k1 = (A[i, z, 0] - A[i - 1, z, 0]) / b
-                        
-                    B = np.array([[k1 * np.cos(theta1), -k2, np.sin(theta1) * k1],
-                                  [k2 * np.cos(theta1), k1, k2 * np.sin(theta1)],
-                                  [-np.sin(theta1), 0, np.cos(theta1)]])
+                        NC[:, k] = np.array([x2, y2, z2]).T + A[i, z].T
+            
+                        # Define following coordinates
+                        A[i + 1, z,0] = NC[0,k] 
+                        A[i + 1, z,1] = NC[1,k]
+                        A[i + 1, z,2] = NC[2,k]
 
-                    x2 = a * rM[k] * np.sin(chi[k]) * np.cos(phi[k])
-                    y2 = a * rM[k] * np.sin(chi[k]) * np.sin(phi[k])
-                    z2 = a * rM[k] * np.cos(chi[k])
+                        z += 1
+    else:
+         for i in range(1, n):
+            z = 0
+            for j in range(0, mN**(i - 1)):
+                for k in range(0, mN):
+                    for m in range(0, mN**(n - i)):
 
-                    NC[:, k] = np.array([x2, y2, z2]).T + A[i, z].T
-         
-                    # Define following coordinates
-                    A[i + 1, z,0] = NC[0,k] 
-                    A[i + 1, z,1] = NC[1,k]
-                    A[i + 1, z,2] = NC[2,k]
+                        a = np.sqrt((A[i - 1, z, 0] - A[i, z, 0])**2 
+                                    + (A[i - 1, z, 1] - A[i, z, 1])**2 +
+                                    (A[i - 1, z, 2] - A[i, z, 2])**2)
+                            
+                        x2 = a * (rM[k]+np.random.uniform(-1,1)*rnd_branch) * np.sin(chi[k]+np.random.uniform(-1,1)*rnd_chi) * np.cos(phi[k]+np.random.uniform(-1,1)*rnd_phi)
+                        y2 = a * (rM[k]+np.random.uniform(-1,1)*rnd_branch) * np.sin(chi[k]+np.random.uniform(-1,1)*rnd_chi) * np.sin(phi[k]+np.random.uniform(-1,1)*rnd_phi)
+                        z2 = a * (rM[k]+np.random.uniform(-1,1)*rnd_branch) * np.cos(chi[k]+np.random.uniform(-1,1)*rnd_chi)
 
-                    z += 1
+                        NC[:, k] = np.array([x2, y2, z2]).T + A[i, z].T
+            
+                        # Define following coordinates
+                        A[i + 1, z,0] = NC[0,k] 
+                        A[i + 1, z,1] = NC[1,k]
+                        A[i + 1, z,2] = NC[2,k]
 
+                        z += 1
     # Visualizing lines using Bresenhams line algorithm
     for i in range(1, mN**n+1, mN):
         z = 1
         for k in range(1,mN):
             for j in range(z, n ):
-                matrix = bresenham3D(A[j-1, i-1, 0], A[j, i-1, 0], A[j-1, i-1, 1], A[j, i-1, 1], A[j-1, i-1,2], A[j, i-1,2] ,int(t*tr**(i-1)), matrix)
+                matrix = bresenham3D(A[j-1, i-1, 0], A[j, i-1, 0], A[j-1, i-1, 1], 
+                                     A[j, i-1, 1], A[j-1, i-1,2], A[j, i-1,2] ,
+                                     int(round(t*tr**(i-1))), matrix)
             z += 1
-
     # Visualizing end branches
     for i in range(mN**n):
-        matrix = bresenham3D(A[n-1, i-1, 0], A[n, i-1, 0], A[n-1, i-1, 1], A[n , i-1, 1],A[n-1, i-1,2], A[n, i-1,2], int(t*tr**(n)), matrix)
+        matrix = bresenham3D(A[n-1, i-1, 0], A[n, i-1, 0], A[n-1, i-1, 1], 
+                             A[n , i-1, 1],A[n-1, i-1,2], A[n, i-1,2], 
+                             int(round(t*tr**(n))), matrix)
 
      # Visualizing the trunk
-    matrix = bresenham3D(xb[0]/delta_x + pixels[1]//2, xb[1]/delta_x + pixels[1]//2, yb[0]/delta_y + pixels[0]//2, yb[1]/delta_y + pixels[0]//2, zb[0]/delta_z, zb[1]/delta_z,int(t), matrix)
+    matrix = bresenham3D(xb[0]/delta_x + pixels[1]//2, xb[1]/delta_x + pixels[1]//2, 
+                         yb[0]/delta_y + pixels[0]//2, yb[1]/delta_y + pixels[0]//2, 
+                         zb[0]/delta_z, zb[1]/delta_z,
+                         int(round(t)), matrix)
     return matrix
 
-matrix = FraktalT(3,[0.8, 0.6, 0.8, 0.6],[np.pi/4, -np.pi/4, 3*np.pi/4, 5*np.pi/4, ],[np.pi/3, np.pi/6,np.pi/6, np.pi/3], [0,0], [0,0], [0,100], 5, 0.8,[500,500,500], [120,120,120])
+matrix = FraktalT(DEPTH,BRANCHING_RATIO,BRANCHING_POLAR,BRANCHING_AZIMUTHAL, 
+                  [ROOT_START[0], ROOT_END[0]], [ROOT_START[1], ROOT_END[1]],[ROOT_START[2], ROOT_END[2]], 
+                  THICKNESS_ROOT, THICKNESS_RATIO, DOMAIN_DIMENSIONS, DOMAIN_PIXELS,
+                  ANGLE_VARIATION_POLAR, ANGLE_VARIATION_AZIMUTHAL, BRANCHING_VARIATION)
 
 fig = plt.figure(figsize=(10,10))
 ax = fig.add_subplot(projection="3d")
 ax.invert_xaxis()
-ax.voxels(matrix, facecolor = 'black', edgecolor = 'white',shade=None)
+ax.set_axis_off()
+ax.voxels(matrix, facecolor = 'brown', edgecolor = 
+          'black', shade=None)
 plt.show()
 
