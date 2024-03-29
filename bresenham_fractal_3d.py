@@ -7,14 +7,14 @@ import h5py
 import os
 
 ### Configuration Options ###
-DEPTH = 5                                                      # Fractal depth
+DEPTH = 4                                                      # Fractal depth
 BRANCHING_RATIO = [0.9, 0.9, 0.9]                              # Length ratio bw parent and daugther branch
 BRANCHING_POLAR = [2*np.pi/3, 4*np.pi/3, 6*np.pi/3]       # Polar angles
 BRANCHING_AZIMUTHAL = [np.pi/4, np.pi/4, np.pi/4]          # Azimuthal angles
 
 ROOT_START = [0,0,0]                                                # Start of root
 ROOT_END = [0,0,100]                                                # End of root
-THICKNESS_ROOT = 4                                                  # Radius of the root
+THICKNESS_ROOT = 3                                                  # Radius of the root
 MIN_THICKNESS_BRANCH = 1                                           # Minimum radius of the branch
 
 THICKNESS_RATIO = 0.6                                               # Thickness ratio bw parent and daugther branch     
@@ -28,7 +28,7 @@ ANGLE_VARIATION_AZIMUTHAL = np.pi/8                                 # Maximum de
 BRANCHING_VARIATION = 0.1                                           # Maximum deviation in branching ratio
 THICKNESS_VARIATION = 2                                             # Maximum deviation in thickness
 
-SHOWCASE_RESULT = False                                              # Showcase result
+SHOWCASE_RESULT = True                                              # Showcase result
 COORDS_OUT_OF_BOUNDS = True                                           # Should coords out of bounds be allowed (T : yes, F: no)
 SAVE_MATRIX = False                                                   # Save matrix as HDF5 file
 SAVE_CONFIG_TXT = False                                               # Save configuration txt file
@@ -69,9 +69,11 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
             p2 = dz_2- dx
             while (x1 != x2):
                 
-                if y1 >= DOMAIN_PIXELS[1] or z1 >= DOMAIN_PIXELS[2] or x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 < 0 or z1 < 0 and not COORDS_OUT_OF_BOUNDS:
-                        print("Error. Coordinate out of bounds.")
-                        sys.exit()
+                if y1 >= DOMAIN_PIXELS[1] or z1 >= DOMAIN_PIXELS[2] or x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 < 0 or z1 < 0:
+                        if not COORDS_OUT_OF_BOUNDS:
+                            print("Error. Coordinate out of bounds. Terminated code.")
+                            sys.exit()
+                        continue
                 else:
                     if int(th) == 1:
                         matrix[y1][x1][z1] = 1
@@ -100,8 +102,10 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
             while (y1 != y2):
                  
                 if y1 >= DOMAIN_PIXELS[1] or z1 >= DOMAIN_PIXELS[2] or x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 < 0 or z1 < 0:
-                        print("Error. Coordinate out of bounds.")
-                        sys.exit()
+                        if not COORDS_OUT_OF_BOUNDS:
+                            print("Error. Coordinate out of bounds. Terminated code.")
+                            sys.exit()
+                        continue
                 else:
                     if int(th) == 1:
                         matrix[y1][x1][z1] = 1
@@ -126,8 +130,10 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
         p2 = dx_2- dz
         while (z1 != z2):
             if y1 >= DOMAIN_PIXELS[1] or z1 >= DOMAIN_PIXELS[2] or x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 < 0 or z1 < 0:
-                        print("Error. Coordinate out of bounds.")
-                        sys.exit()
+                        if not COORDS_OUT_OF_BOUNDS:
+                            print("Error. Coordinate out of bounds. Terminated code.")
+                            sys.exit()
+                        continue
             else:
                 if int(th) == 1:
                     matrix[y1][x1][z1] = 1
