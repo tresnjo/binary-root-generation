@@ -3,25 +3,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 from mpl_toolkits.mplot3d import Axes3D
+import os
 
 ### Configuration Options ###
 
 ROOT_START = [0,0,0]                                                # Start of root
-ROOT_END = [0,0,200]                                                 # End of root
-ROOT_THICKNESS = 2
+ROOT_END = [0,0,10]                                                 # End of root
+ROOT_THICKNESS = 2                                                  # Speficication of root thickness
 MIN_THICKNESS_BRANCH = 1                                           # Minimum radius of the branch  
-DOMAIN_DIMENSIONS = [500,500,500]                                 # Dimensions of the domain 
-DOMAIN_PIXELS = [60, 60, 60]                                     # Number of pixels in binary domain            
-
-SEED = 418                                                          # Seed for random fractal generation
-
-METHOD = 'SPACE'                                                  # FRACTAL or SPACE                   
-SHOWCASE_RESULT = True                                              # Showcase result
+MAX_THICKNESS_BRANCH = 3                                          # Maximum radius of the branch
+DOMAIN_DIMENSIONS = [18.7,18.7,37.4]                                 # Dimensions of the domain 
+DOMAIN_PIXELS = [40, 40, 80]                                     # Number of pixels in binary domain            
+SEED = 212                                                          # Seed for random fractal generation  
+RADIUS_OF_INFLUENCE = 20                                            # Radius of incluence for space colonization algorithm
+KILL_DISTANCE = 1                                                  # Kill distance for space colonization algorithm
+D = 5                                                               # Jump distance D
+CROWN_TYPE = r'C'                                                # CUBOID (C) or ELLIPSOIDE (E)
+SHOWCASE_RESULT = True                                              # Showcase result (T : yes, F: no)
 COORDS_OUT_OF_BOUNDS = True                                           # Should coords out of bounds be allowed (T : yes, F: no)
-SAVE_MATRIX = False                                                   # Save matrix as HDF5 file
-SAVE_CONFIG_TXT = False                                               # Save configuration txt file
-SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal'                # Saving location
-FILE_NAME = r'matrix.h5'                                               # File name
+SAVE_MATRIX = True                                                   # Save matrix as binary txt file
+SAVE_CONFIG_TXT = True                                               # Save configuration settings as txt file
+SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\ '                # Saving location
+FILE_NAME = r'root'                                               # Root file name
+CONFIG_FILE_NAME = r'config'                                      # Configuration file name
+
 
 random.seed(SEED)
 
@@ -46,7 +51,7 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
 
     dx_2,dy_2,dz_2 = 2*dx,2*dy,2*dz
     
-    th = max(th, MIN_THICKNESS_BRANCH)
+    th = min(max(th, MIN_THICKNESS_BRANCH), MAX_THICKNESS_BRANCH)
 
     # Case I: dx > dy and dx > dz
     if (dx >= dy and dx >= dz): 
@@ -65,7 +70,10 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                         for y_th in range(0, 2*th+1):
                             max_t_z = int(np.sqrt(th**2-(y_th-th)**2))
                             for z_th in range(0,2*max_t_z+1):
-                                matrix[y1-th+y_th][x1][z1-max_t_z+z_th] = 1
+                                if y1 - th + y_th >= DOMAIN_PIXELS[0] or z1-max_t_z+z_th >= DOMAIN_PIXELS[2]:
+                                   break
+                                else:
+                                  matrix[y1-th+y_th][x1][z1-max_t_z+z_th] = 1
 
                 
                 if (p1 >= 0):
@@ -96,7 +104,10 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                         for x_th in range(0, 2*th+1):
                             max_t_z = int(np.sqrt(th**2-(x_th-th)**2))
                             for z_th in range(0,2*max_t_z+1):
-                                matrix[y1][x1-th+x_th][z1-max_t_z+z_th] = 1
+                                if x1 - th + x_th >= DOMAIN_PIXELS[1] or z1 - max_t_z + z_th >= DOMAIN_PIXELS[2]:
+                                   break
+                                else:
+                                  matrix[y1][x1-th+x_th][z1-max_t_z+z_th] = 1
                 if (p1 >= 0):
                     x1 += xs
                     p1 -= dy_2
@@ -123,7 +134,10 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                     for x_th in range(0, 2*th+1):
                         max_t_y = int(np.sqrt(th**2-(x_th-th)**2))
                         for y_th in range(0,2*max_t_y+1):
-                            matrix[y1-max_t_y + y_th][x1-th+x_th][z1] = 1
+                            if y1-max_t_y + y_th >= DOMAIN_PIXELS[0] or x1-th+x_th >= DOMAIN_PIXELS[1]:
+                               break
+                            else:
+                              matrix[y1-max_t_y + y_th][x1-th+x_th][z1] = 1
             if (p1 >= 0):
                 y1 += ys
                 p1 -= dz_2
@@ -223,7 +237,6 @@ class Simulation:
 
     self.iter_num = 0
 
-    # attraction points
     x, y, z = crown_attraction_points
 
     attraction_pts = []
@@ -251,13 +264,11 @@ class Simulation:
   def _update_closest_node(self, node):
     kill_candidates = []
 
-    # internal method to update self.closest_node and self.closest_dist
     for attr_pt in self.closest_node:
       old_smallest = self.closest_dist[attr_pt]
       dist = np.linalg.norm(attr_pt.pos - node.pos)
 
       if dist < self.d_k:
-        # attr_pt to be killed
         kill_candidates.append(attr_pt)
         continue
 
@@ -265,7 +276,6 @@ class Simulation:
         self.closest_node[attr_pt] = node
         self.closest_dist[attr_pt] = dist
 
-    # kill attraction points with nodes too close to them
     for attr_pt in kill_candidates:
       del self.closest_node[attr_pt]
       del self.closest_dist[attr_pt]
@@ -330,7 +340,7 @@ class Simulation:
 
   def render_results(self):
     
-    matrix = np.zeros((DOMAIN_PIXELS[0], DOMAIN_PIXELS[1], DOMAIN_PIXELS[2]))
+    matrix = np.zeros((DOMAIN_PIXELS[0], DOMAIN_PIXELS[1], DOMAIN_PIXELS[2])).astype(int)
 
     
     fig = plt.figure()
@@ -340,32 +350,66 @@ class Simulation:
     delta_y = DOMAIN_DIMENSIONS[1]/DOMAIN_PIXELS[1]
     delta_z = DOMAIN_DIMENSIONS[2]/DOMAIN_PIXELS[2]
 
-    x = np.array([ROOT_START[0], ROOT_END[0]])/delta_x + DOMAIN_PIXELS[0]//2
-    y = np.array([ROOT_START[1], ROOT_END[1]])/delta_y+ DOMAIN_PIXELS[1]//2
-    z = np.array([ROOT_START[2], ROOT_END[2]])/delta_z 
+    x_init = np.array([ROOT_START[0], ROOT_END[0]])/delta_x + DOMAIN_PIXELS[0]//2
+    y_init = np.array([ROOT_START[1], ROOT_END[1]])/delta_y+ DOMAIN_PIXELS[1]//2
+    z_init = np.array([ROOT_START[2], ROOT_END[2]])/delta_z 
 
-      #ax.plot(x, y, z, c='forestgreen', linewidth=lw)
-    matrix = bresenham3D(x[0], x[1], y[0], y[1], z[0], z[1], 3, matrix)
+    max_th = 0
 
     for branch in self.branches:
       start, end, node = branch
 
       lw = self.branch_thinkness(node)
 
+      if lw > max_th:
+         max_th = lw
+
       x = np.array([start[0], end[0]])/delta_x + DOMAIN_PIXELS[0]//2
       y = np.array([start[1], end[1]])/delta_y+ DOMAIN_PIXELS[1]//2
       z = np.array([start[2], end[2]])/delta_z 
 
-      #ax.plot(x, y, z, c='forestgreen', linewidth=lw)
-      matrix = bresenham3D(x[0], x[1], y[0], y[1], z[0], z[1], int(round(lw/4)), matrix)
+      matrix = bresenham3D(x[0], x[1], y[0], y[1], z[0], z[1], int(round(lw/6)), matrix)
 
-    ax.invert_xaxis()
-    ax.set_axis_off()
-    ax.voxels(matrix, facecolor = 'brown', edgecolor = 
-            'black', alpha = 0.9, linewidth = 0.5, shade=None)
-    plt.show()
+    matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], int(round(max_th/6)), matrix)
+    matrix = matrix[:,:,::-1]
 
+    if SAVE_MATRIX:
+      save_path = f"{SAVE_LOCATION}{FILE_NAME}.txt"
+      np.savetxt(save_path, matrix.flatten().astype(int), fmt = '%.0f')
 
+    if SHOWCASE_RESULT:
+      ax.invert_xaxis()
+      ax.voxels(matrix, facecolor = 'brown', edgecolor = 
+              'black', alpha = 0.9, linewidth = 0.5, shade=None)
+      plt.show()
+
+    if SAVE_CONFIG_TXT:
+      config_file_path = f"{SAVE_LOCATION}{CONFIG_FILE_NAME}.txt"
+      with open(config_file_path, 'w') as config_file:
+            config_file.write("ROOT_START = {}\n".format(ROOT_START))
+            config_file.write("ROOT_END = {}\n".format(ROOT_END))
+            config_file.write("MIN_THICKNESS_BRANCH = {}\n".format(MIN_THICKNESS_BRANCH))
+            config_file.write("DOMAIN_DIMENSIONS = {}\n".format(DOMAIN_DIMENSIONS))
+            config_file.write("DOMAIN_PIXELS = {}\n".format(DOMAIN_PIXELS))
+            config_file.write("SEED = {}\n".format(SEED))
+            config_file.write("RADIUS_OF_INFLUENCE = {}\n".format(RADIUS_OF_INFLUENCE))
+            config_file.write("KILL_DISTANCE = {}\n".format(KILL_DISTANCE))
+            config_file.write("D = {}\n".format(D))
+            config_file.write("CROWN_TYPE = {}\n".format(CROWN_TYPE))
+            if CROWN_TYPE == 'C':
+              config_file.write("x_min, x_max = {}\n".format([x_min,x_max]))
+              config_file.write("y_min, y_max = {}\n".format([y_min,y_max]))
+              config_file.write("z_min, z_max = {}\n".format([z_min,z_max]))
+              config_file.write("no_of_points = {}\n".format(no_of_points))
+            elif CROWN_TYPE == 'E':
+              config_file.write("mean = {}\n".format(mean))
+              config_file.write("cov = {}\n".format(cov))
+              config_file.write("t_x, t_y, t_z = {}\n".format([t_x,t_y,t_z]))
+              config_file.write("no_of_points = {}\n".format(no_of_points))
+              config_file.write("r = {}\n".format(r))
+               
+    return
+  
   def _iter(self):
 
     self.iter_num += 1
@@ -396,6 +440,25 @@ class Simulation:
     # add newly added nodes
     self.nodes.extend(meta_nodes)
 
+def run_experiment_cuboid_crown_1():
+  np.random.seed(SEED)
+
+  global x_min, x_max, y_min, y_max, z_min, z_max, no_of_points
+  no_of_points = 50
+  x_min = -3/4*DOMAIN_DIMENSIONS[0]
+  x_max = 3/4*DOMAIN_DIMENSIONS[0]
+  y_min = -3/4*DOMAIN_DIMENSIONS[1]
+  y_max = 3/4*DOMAIN_DIMENSIONS[1]
+  z_min = ROOT_END[2]
+  z_max = DOMAIN_DIMENSIONS[2]*3/4
+
+  x_coords = np.random.uniform(x_min, x_max, no_of_points)
+  y_coords = np.random.uniform(y_min, y_max, no_of_points)
+  z_coords = np.random.uniform(z_min, z_max, no_of_points)
+
+  sim = Simulation(crown_attraction_points=(x_coords, y_coords, z_coords), radius_of_influence = RADIUS_OF_INFLUENCE, kill_distance = KILL_DISTANCE, D = D)
+  sim.run(50)
+
 def run_experiment_ellispe_crown_1():
   
   np.random.seed(SEED)
@@ -403,7 +466,13 @@ def run_experiment_ellispe_crown_1():
   fig = plt.figure()
   ax = fig.add_subplot(projection='3d')
 
-  mean = [ROOT_END[0], ROOT_END[1], ROOT_END[2]]
+
+  global mean, cov, t_x, t_y, t_z, no_of_points, r
+
+  no_of_points = 1500
+
+  mean = [ROOT_END[0], ROOT_END[1], (ROOT_END[2]+DOMAIN_DIMENSIONS[2])/2]
+  #mean = [ROOT_END[0], ROOT_END[1], (2*ROOT_END[2]+DOMAIN_DIMENSIONS[2])/3]
 
   # när du kmr hem fixa kovariansmatrisen så du får en bra spridning och sedan även fixa t saken
   # efter det kan du nog få ut relativt fina resultat
@@ -412,9 +481,14 @@ def run_experiment_ellispe_crown_1():
          [0, DOMAIN_DIMENSIONS[1]**2, 0], 
          [0,0,DOMAIN_DIMENSIONS[2]**2]]
 
-  x, y, z= np.random.multivariate_normal(mean, cov, 1000).T
+  x, y, z= np.random.multivariate_normal(mean, cov, no_of_points).T
 
-  t = 3*np.square(x-ROOT_END[0])+ 3*np.square(y-ROOT_END[1]) + 1.5*np.square(z-ROOT_END[2]) <= DOMAIN_DIMENSIONS[0]**2
+  t_x = 4
+  t_y = 4
+  t_z = 2
+  r = DOMAIN_DIMENSIONS[0]
+
+  t = t_x*np.square(x-mean[0])+ t_y*np.square(y-mean[1]) + t_z * np.square(z-(mean[2])) <= r**2
 
   x_crown = x[t]
   y_crown = y[t]
@@ -423,10 +497,12 @@ def run_experiment_ellispe_crown_1():
   ax.plot(x_crown, y_crown, z_crown, 'o')
   plt.show()
 
-  sim = Simulation(crown_attraction_points=(x_crown, y_crown, z_crown), radius_of_influence = 200, kill_distance = 1, D = 10)
+  sim = Simulation(crown_attraction_points=(x_crown, y_crown, z_crown), radius_of_influence = RADIUS_OF_INFLUENCE, kill_distance= KILL_DISTANCE, D = D)
   sim.run(50)
 
   del sim
 
-run_experiment_ellispe_crown_1() 
-     
+if CROWN_TYPE == 'C':
+  run_experiment_cuboid_crown_1() 
+elif CROWN_TYPE == 'E':
+   run_experiment_ellispe_crown_1()
