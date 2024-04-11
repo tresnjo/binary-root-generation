@@ -4,38 +4,40 @@ import matplotlib.pyplot as plt
 import random
 from mpl_toolkits.mplot3d import Axes3D
 import os
-
+import h5py 
+# 256 x 256 x 1024
 ### Configuration Options ###
-NO_OF_ITERATIONS = 50                                             # No of iterations
-PARTICLE_SIZE = 2                                                 # Specify to nearest integer
+# sitt och lek runt med inställningar tills du får ngt du känner dig nöjd med
+# först utan gravitation. justera på radius of influence, kill distance och D
+
+NO_OF_ITERATIONS = 50                                             # No iterations
+PARTICLE_SIZE = 10                                                 # Specify in relation to pixels
 ROOT_START = [0,0,0]                                                # Start of main root
-ROOT_END = [0,0,19]                                                 # End of main root
-ROOT_THICKNESS = 1*PARTICLE_SIZE                                                  # Speficication of main root radius
-MIN_THICKNESS_BRANCH = 1/2*PARTICLE_SIZE                                          # Minimum radius of the branch  
-MAX_THICKNESS_BRANCH = 3/2*PARTICLE_SIZE                                          # Maximum radius of the branch
-DOMAIN_DIMENSIONS = [18.7,18.7,37.4]                                 # Dimensions of the domain 
-DOMAIN_PIXELS = [50, 50, 100]                                     # Number of pixels in binary domain            
-SEED = 100                                                          # Seed for random fractal generation  
-RADIUS_OF_INFLUENCE = 100                                            # Radius of incluence for space colonization algorithm
+ROOT_END = [0,0,20]                                                 # End of main root in terms
+ROOT_THICKNESS = 5/2*PARTICLE_SIZE                                                  # Speficication of main root radius
+MIN_THICKNESS_BRANCH = PARTICLE_SIZE//2                                          # Minimum radius of the branch  
+MAX_THICKNESS_BRANCH = 5/2*PARTICLE_SIZE                                          # Maximum radius of the branch
+DOMAIN_DIMENSIONS = [20,20,40]                                 # Dimensions of the domain 
+DOMAIN_PIXELS = [256, 256, 1024]                                     # Number of pixels in binary domain            
+SEED = 1231                                                          # Seed for random fractal generation  
+RADIUS_OF_INFLUENCE = 20                                            # Radius of incluence for space colonization algorithm
 KILL_DISTANCE = 1                                                # Kill distance for space colonization algorithm
 D = 5                                                            # Jump distance D
-GRAV_ALPHA = 0                                                    # Gravitropism (-1 to 1)
+GRAV_ALPHA = 0.5                                                    # Gravitropism (-1 to 1)
 CROWN_TYPE = r'CY'                                                # CUBOID (C) or ELLIPSOIDE (E) or CYLINDRICAL (CY)
-SHOWCASE_RESULT = True                                              # Showcase result (T : yes, F: no)
+SHOWCASE_RESULT = False                                              # Showcase result (T : yes, F: no)
 COORDS_OUT_OF_BOUNDS = True                                           # Should coords out of bounds be allowed (T : yes, F: no)
-SAVE_MATRIX = True                                                   # Save matrix as binary txt file
+SAVE_MATRIX = False                                                   # Save matrix as binary txt file
 SAVE_CONFIG_TXT = True                                               # Save configuration settings as txt file
-SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\ '                # Saving location
+SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\taproots\ '                # Saving location
 FILE_NAME = r'root'                                               # Root file name
 CONFIG_FILE_NAME = r'config'                                      # Configuration file name
-TAP_ROOT_STYLE = False                                            # To generate tap root of main root
+TAP_ROOT_STYLE = True                                            # To generate tap root of main root
+SAVE_AS_H5 = True
 
 # gravitropism
 # cylindrical sampling
 # parametrize thickness from radius of sphere
-# 
-
-random.seed(SEED)
 
 def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
 
@@ -306,6 +308,7 @@ class Simulation:
     
     fig = plt.figure()
     ax = fig.add_subplot(projection="3d")
+    ax.set_box_aspect((1,DOMAIN_DIMENSIONS[1]//DOMAIN_DIMENSIONS[0],DOMAIN_DIMENSIONS[2]//DOMAIN_DIMENSIONS[0]))
     ax.scatter(x, y, z, c='slategray')
     plt.show()
 
@@ -350,6 +353,7 @@ class Simulation:
     
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
+    ax.set_box_aspect((1,DOMAIN_DIMENSIONS[1]//DOMAIN_DIMENSIONS[0],DOMAIN_DIMENSIONS[2]//DOMAIN_DIMENSIONS[0]))
 
     delta_x = DOMAIN_DIMENSIONS[0]/DOMAIN_PIXELS[0]
     delta_y = DOMAIN_DIMENSIONS[1]/DOMAIN_PIXELS[1]
@@ -379,39 +383,21 @@ class Simulation:
 
     if TAP_ROOT_STYLE:
       z = np.linspace(z_init[0], z_init[1], 10)
-      th = np.linspace(MIN_THICKNESS_BRANCH, ROOT_THICKNESS, 10)
-      print(th)
+      k = 0.02
       for i in range(1,10):
-        matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z[i-1], z[i], int(round(th[-i])), matrix)
+        matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z[i-1], z[i], self.tap_root(ROOT_THICKNESS,k,z[i-1]), matrix)
     else:
        matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], ROOT_THICKNESS, matrix)
     
     matrix = matrix[:,:,::-1]
 
     if SAVE_MATRIX:
-      save_path = f"{SAVE_LOCATION}{FILE_NAME}.txt"
-      if os.path.exists(save_path):
-        i = 1
-        while True:
-          new_filename = f"{SAVE_LOCATION}{FILE_NAME}({i}).txt"
-          if not os.path.exists(new_filename):
-              save_path = new_filename
-              break
-          i += 1
-      
+      save_path = self.save_file(f"{SAVE_LOCATION}{FILE_NAME}.txt", FILE_NAME, type = "txt")
       np.savetxt(save_path, matrix.flatten().astype(int), fmt = '%.0f')
 
     if SAVE_CONFIG_TXT:
-      config_file_path = f"{SAVE_LOCATION}{CONFIG_FILE_NAME}.txt"
-      if os.path.exists(config_file_path):
-        i = 1
-        while True:
-          new_filename = f"{SAVE_LOCATION}{CONFIG_FILE_NAME}({i}).txt"
-          if not os.path.exists(new_filename):
-              config_file_path = new_filename
-              break
-          i += 1
-
+      config_file_path = self.save_file(f"{SAVE_LOCATION}{CONFIG_FILE_NAME}.txt", CONFIG_FILE_NAME, type = "txt")
+      print(config_file_path)
       with open(config_file_path, 'w') as config_file:
             config_file.write("ROOT_START = {}\n".format(ROOT_START))
             config_file.write("ROOT_END = {}\n".format(ROOT_END))
@@ -439,15 +425,37 @@ class Simulation:
               config_file.write("no_of_points = {}\n".format(no_of_points))
               config_file.write("z_min, z_max = {}\n".format([z_min,z_max]))
               config_file.write("r_inner, r_outer = {}\n".format([r_inner,r_outer]))
-             
+
+    if SAVE_AS_H5:
+      save_path_h5 = self.save_file(f"{SAVE_LOCATION}{FILE_NAME}.h5", FILE_NAME, type = "h5")
+      print(save_path_h5)
+      with h5py.File(save_path_h5, 'w') as hf:
+          hf.create_dataset("root",  data=matrix)
+      return
+          
     if SHOWCASE_RESULT:
+      print("OK")
       ax.invert_xaxis()
       ax.voxels(matrix, facecolor = 'brown', edgecolor = 
               'black', alpha = 0.9, linewidth = 0.5, shade=None)
+      ax.set_box_aspect((1,DOMAIN_DIMENSIONS[1]//DOMAIN_DIMENSIONS[0],DOMAIN_DIMENSIONS[2]//DOMAIN_DIMENSIONS[0]))
       plt.show()  
 
-    return
+
+
+  def tap_root(self, m, k, z):
+     return m - k * z
   
+  def save_file(self,save_path, filename, type):
+    if os.path.exists(save_path):
+        i = 1
+        while True:
+          new_filename = f"{SAVE_LOCATION}{filename}({i}).{type}"
+          if not os.path.exists(new_filename):
+              save_path = new_filename
+              break
+          i += 1
+    return save_path
   def _iter(self):
 
     self.iter_num += 1
@@ -464,7 +472,8 @@ class Simulation:
         n = np.array([0, 0, 0], dtype=float)
         for attr_pt in S_v:
           n += (attr_pt.pos - node.pos) / np.linalg.norm(attr_pt.pos - node.pos)
-        n = n / np.linalg.norm(n) + GRAV_ALPHA*np.array([0,0,1])
+        
+        n = n / np.linalg.norm(n) + GRAV_ALPHA*np.array([0,0,1]) 
 
         new_pos = node.pos + n * self.D
         new_node = Tree_node(new_pos[0], new_pos[1], new_pos[2])
@@ -529,6 +538,7 @@ def run_experiment_ellispe_crown_1():
   z_crown = z[t]
 
   ax.plot(x_crown, y_crown, z_crown, 'o')
+  ax.set_box_aspect((1,DOMAIN_DIMENSIONS[1]//DOMAIN_DIMENSIONS[0],DOMAIN_DIMENSIONS[2]//DOMAIN_DIMENSIONS[0]))
   plt.show()
 
   sim = Simulation(crown_attraction_points=(x_crown, y_crown, z_crown), radius_of_influence = RADIUS_OF_INFLUENCE, kill_distance= KILL_DISTANCE, D = D)
@@ -539,16 +549,18 @@ def run_experiment_ellispe_crown_1():
 
 def run_cylindrical():
 
+  np.random.seed(SEED)
+
   fig = plt.figure()
   ax = fig.add_subplot(projection='3d')
     
   global no_of_points, z_min, z_max, r_inner, r_outer
 
-  no_of_points = 50
-  z_min = ROOT_END[2]/2
-  z_max = DOMAIN_DIMENSIONS[2]  
-  r_inner = ROOT_THICKNESS
-  r_outer = 5
+  no_of_points = 200
+  z_min = 0
+  z_max = ROOT_END[2]
+  r_inner = ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
+  r_outer = 10*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
   r = np.random.uniform(r_inner, r_outer, no_of_points)
   theta = np.random.uniform(0, 2*np.pi, no_of_points)
   z = np.random.uniform(z_min, z_max, no_of_points)
@@ -557,13 +569,11 @@ def run_cylindrical():
   y = r*np.sin(theta)
 
   ax.plot(x, y, z, 'o')
+  ax.set_box_aspect((1,DOMAIN_DIMENSIONS[1]//DOMAIN_DIMENSIONS[0],DOMAIN_DIMENSIONS[2]//DOMAIN_DIMENSIONS[0]))
   plt.show()
 
   sim = Simulation(crown_attraction_points=(x, y, z), radius_of_influence = RADIUS_OF_INFLUENCE, kill_distance = KILL_DISTANCE, D = D)
   sim.run(NO_OF_ITERATIONS)
-
-def normally_distributed():
-   return
 
 if CROWN_TYPE == 'C':
   run_experiment_cuboid_crown_1() 
@@ -571,4 +581,5 @@ elif CROWN_TYPE == 'E':
   run_experiment_ellispe_crown_1()
 elif CROWN_TYPE == 'CY':
   run_cylindrical()
+
 
