@@ -11,27 +11,27 @@ import h5py
 # först utan gravitation. justera på radius of influence, kill distance och D
 
 NO_OF_ITERATIONS = 50                                             # No iterations
-PARTICLE_SIZE = 10                                                 # Specify in relation to pixels
+PARTICLE_SIZE = 5                                                 # Specify in relation to pixels
 ROOT_START = [0,0,0]                                                # Start of main root
 ROOT_END = [0,0,20]                                                 # End of main root in terms
-ROOT_THICKNESS = 5/2*PARTICLE_SIZE                                                  # Speficication of main root radius
-MIN_THICKNESS_BRANCH = PARTICLE_SIZE//2                                          # Minimum radius of the branch  
-MAX_THICKNESS_BRANCH = 5/2*PARTICLE_SIZE                                          # Maximum radius of the branch
+ROOT_THICKNESS = 10*PARTICLE_SIZE                                                  # Speficication of main root radius
+MIN_THICKNESS_BRANCH = 2*PARTICLE_SIZE                                          # Minimum radius of the branch  
+MAX_THICKNESS_BRANCH = 6*PARTICLE_SIZE                                          # Maximum radius of the branch
 DOMAIN_DIMENSIONS = [20,20,40]                                 # Dimensions of the domain 
 DOMAIN_PIXELS = [256, 256, 1024]                                     # Number of pixels in binary domain            
-SEED = 1231                                                          # Seed for random fractal generation  
-RADIUS_OF_INFLUENCE = 20                                            # Radius of incluence for space colonization algorithm
+SEED = 212                                                          # Seed for random fractal generation  
+RADIUS_OF_INFLUENCE = 50                                            # Radius of incluence for space colonization algorithm
 KILL_DISTANCE = 1                                                # Kill distance for space colonization algorithm
 D = 5                                                            # Jump distance D
-GRAV_ALPHA = 0.5                                                    # Gravitropism (-1 to 1)
+GRAV_ALPHA = 0                                                    # Gravitropism (-1 to 1)
 CROWN_TYPE = r'CY'                                                # CUBOID (C) or ELLIPSOIDE (E) or CYLINDRICAL (CY)
 SHOWCASE_RESULT = False                                              # Showcase result (T : yes, F: no)
 COORDS_OUT_OF_BOUNDS = True                                           # Should coords out of bounds be allowed (T : yes, F: no)
 SAVE_MATRIX = False                                                   # Save matrix as binary txt file
 SAVE_CONFIG_TXT = True                                               # Save configuration settings as txt file
 SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\taproots\ '                # Saving location
-FILE_NAME = r'root'                                               # Root file name
-CONFIG_FILE_NAME = r'config'                                      # Configuration file name
+FILE_NAME = r'taproot_ex2'                                               # Root file name
+CONFIG_FILE_NAME = r'config_tap_ex2'                                      # Configuration file name
 TAP_ROOT_STYLE = True                                            # To generate tap root of main root
 SAVE_AS_H5 = True
 
@@ -58,8 +58,6 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
     zs = 1 if zdif > 0 else -1
 
     dx_2,dy_2,dz_2 = 2*dx,2*dy,2*dz
-    
-    th = int(min(max(th, MIN_THICKNESS_BRANCH), MAX_THICKNESS_BRANCH))
 
     # Case I: dx > dy and dx > dz
     if (dx >= dy and dx >= dz): 
@@ -73,12 +71,15 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                         break
                 else:
                     if int(th) == 1:
+                      if x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 >= DOMAIN_PIXELS[1] or y1 < 0 or z1 >= DOMAIN_PIXELS[2] or z1 < 0:
+                        break
+                      else:
                         matrix[y1][x1][z1] = 1
                     else:
                         for y_th in range(0, 2*th+1):
                             max_t_z = int(np.sqrt(th**2-(y_th-th)**2))
                             for z_th in range(0,2*max_t_z+1):
-                                if y1 - th + y_th >= DOMAIN_PIXELS[0] or z1-max_t_z+z_th >= DOMAIN_PIXELS[2]:
+                                if y1 - th + y_th >= DOMAIN_PIXELS[0] or y1 - th + y_th >= DOMAIN_PIXELS[0] < 0 or z1-max_t_z+z_th >= DOMAIN_PIXELS[2] or z1-max_t_z+z_th < 0:
                                    break
                                 else:
                                   matrix[y1-th+y_th][x1][z1-max_t_z+z_th] = 1
@@ -107,12 +108,15 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                         break
                 else:
                     if int(th) == 1:
+                      if x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 >= DOMAIN_PIXELS[1] or y1 < 0 or z1 >= DOMAIN_PIXELS[2] or z1 < 0:
+                        break
+                      else:
                         matrix[y1][x1][z1] = 1
                     else:
                         for x_th in range(0, 2*th+1):
                             max_t_z = int(np.sqrt(th**2-(x_th-th)**2))
                             for z_th in range(0,2*max_t_z+1):
-                                if x1 - th + x_th >= DOMAIN_PIXELS[1] or z1 - max_t_z + z_th >= DOMAIN_PIXELS[2]:
+                                if x1 - th + x_th >= DOMAIN_PIXELS[0] or x1 - th + x_th < 0 or z1 - max_t_z + z_th >= DOMAIN_PIXELS[2] or z1 - max_t_z + z_th < 0:
                                    break
                                 else:
                                   matrix[y1][x1-th+x_th][z1-max_t_z+z_th] = 1
@@ -137,12 +141,15 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                         break
             else:
                 if int(th) == 1:
-                    matrix[y1][x1][z1] = 1
+                    if x1 >= DOMAIN_PIXELS[0] or x1 < 0 or y1 >= DOMAIN_PIXELS[1] or y1 < 0 or z1 >= DOMAIN_PIXELS[2] or z1 < 0:
+                       break
+                    else:
+                      matrix[y1][x1][z1] = 1
                 else:
                     for x_th in range(0, 2*th+1):
                         max_t_y = int(np.sqrt(th**2-(x_th-th)**2))
                         for y_th in range(0,2*max_t_y+1):
-                            if y1-max_t_y + y_th >= DOMAIN_PIXELS[0] or x1-th+x_th >= DOMAIN_PIXELS[1]:
+                            if y1-max_t_y + y_th >= DOMAIN_PIXELS[0] or  y1-max_t_y + y_th < 0 or x1-th+x_th >= DOMAIN_PIXELS[0] or x1-th+x_th < 0:
                                break
                             else:
                               matrix[y1-max_t_y + y_th][x1-th+x_th][z1] = 1
@@ -253,7 +260,7 @@ class Simulation:
 
     # nodes
     self.nodes = []
-    root = Tree_node(ROOT_END[0], ROOT_END[1], ROOT_END[2])
+    root = Tree_node(0, 0, 0)
     self.nodes.append(root)
 
     # closest node to each attraction pt
@@ -294,8 +301,6 @@ class Simulation:
     print('Number of nodes:', len(self.nodes))
     print('Number of attraction points:', len(self.closest_node))
     print()
-
-    data = np.stack([node.pos for node in self.nodes])
 
     x = []
     y = []
@@ -379,15 +384,21 @@ class Simulation:
       y = np.array([start[1], end[1]])/delta_y+ DOMAIN_PIXELS[1]//2
       z = np.array([start[2], end[2]])/delta_z 
 
-      matrix = bresenham3D(x[0], x[1], y[0], y[1], z[0], z[1], int(round(lw/max_th*MAX_THICKNESS_BRANCH)), matrix)
+      matrix = bresenham3D(x[0], x[1], y[0], y[1], z[0], z[1], int(MIN_THICKNESS_BRANCH + (MAX_THICKNESS_BRANCH - MIN_THICKNESS_BRANCH)*lw/max_th), matrix)
 
     if TAP_ROOT_STYLE:
-      z = np.linspace(z_init[0], z_init[1], 10)
-      k = 0.02
-      for i in range(1,10):
-        matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z[i-1], z[i], self.tap_root(ROOT_THICKNESS,k,z[i-1]), matrix)
+      global max_dev_x, max_dev_y, no_of_division, slope
+      max_dev_x = 20
+      max_dev_y = 20
+      no_of_division = 15
+      z = np.linspace(z_init[0], z_init[1], no_of_division)
+      xs = np.random.uniform(-max_dev_x, max_dev_x, no_of_division)
+      ys = np.random.uniform(-max_dev_y, max_dev_y, no_of_division)
+      slope = 0.05
+      for i in range(1,no_of_division):
+        matrix = bresenham3D(x_init[0]+xs[i-1], x_init[1]+xs[i], y_init[0]+ys[i-1], y_init[1]+ys[i], z[i-1], z[i], int(self.tap_root(ROOT_THICKNESS,slope,z[i-1])), matrix)
     else:
-       matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], ROOT_THICKNESS, matrix)
+       matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], int(ROOT_THICKNESS), matrix)
     
     matrix = matrix[:,:,::-1]
 
@@ -410,6 +421,12 @@ class Simulation:
             config_file.write("KILL_DISTANCE = {}\n".format(KILL_DISTANCE))
             config_file.write("D = {}\n".format(D))
             config_file.write("CROWN_TYPE = {}\n".format(CROWN_TYPE))
+            config_file.write("TAP_ROOT_STYLE = {}\n".format(TAP_ROOT_STYLE))
+            if TAP_ROOT_STYLE:
+              config_file.write("MAX_DELTA_X = {}\n".format(max_dev_x))
+              config_file.write("MAX_DELTA_Y = {}\n".format(max_dev_y))
+              config_file.write("NO_OF_DIVS = {}\n".format(no_of_division))
+              config_file.write("SLOPE = {}\n".format(slope))
             if CROWN_TYPE == 'C':
               config_file.write("x_min, x_max = {}\n".format([x_min,x_max]))
               config_file.write("y_min, y_max = {}\n".format([y_min,y_max]))
@@ -440,9 +457,7 @@ class Simulation:
               'black', alpha = 0.9, linewidth = 0.5, shade=None)
       ax.set_box_aspect((1,DOMAIN_DIMENSIONS[1]//DOMAIN_DIMENSIONS[0],DOMAIN_DIMENSIONS[2]//DOMAIN_DIMENSIONS[0]))
       plt.show()  
-
-
-
+     
   def tap_root(self, m, k, z):
      return m - k * z
   
@@ -556,11 +571,14 @@ def run_cylindrical():
     
   global no_of_points, z_min, z_max, r_inner, r_outer
 
-  no_of_points = 200
-  z_min = 0
-  z_max = ROOT_END[2]
-  r_inner = ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
-  r_outer = 10*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
+  # justera tills den ligger innanför området
+  # få bort redunant roots
+  # justera så vi får lite mer branching med lite mindre rötter till radien också
+  no_of_points = 50
+  z_min = 1/4*ROOT_END[2]
+  z_max = 5/4 * ROOT_END[2]
+  r_inner = 2*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
+  r_outer = 2.5*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
   r = np.random.uniform(r_inner, r_outer, no_of_points)
   theta = np.random.uniform(0, 2*np.pi, no_of_points)
   z = np.random.uniform(z_min, z_max, no_of_points)
@@ -581,5 +599,3 @@ elif CROWN_TYPE == 'E':
   run_experiment_ellispe_crown_1()
 elif CROWN_TYPE == 'CY':
   run_cylindrical()
-
-
