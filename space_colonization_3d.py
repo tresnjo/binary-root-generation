@@ -5,39 +5,33 @@ import random
 from mpl_toolkits.mplot3d import Axes3D
 import os
 import h5py 
-# 256 x 256 x 1024
-### Configuration Options ###
-# sitt och lek runt med inställningar tills du får ngt du känner dig nöjd med
-# först utan gravitation. justera på radius of influence, kill distance och D
 
+### Configuration Options ###
 NO_OF_ITERATIONS = 50                                             # No iterations
 PARTICLE_SIZE = 5                                                 # Specify in relation to pixels
 ROOT_START = [0,0,0]                                                # Start of main root
-ROOT_END = [0,0,20]                                                 # End of main root in terms
+ROOT_END = [0,0,40]                                                 # End of main root in terms
 ROOT_THICKNESS = 10*PARTICLE_SIZE                                                  # Speficication of main root radius
-MIN_THICKNESS_BRANCH = 2*PARTICLE_SIZE                                          # Minimum radius of the branch  
-MAX_THICKNESS_BRANCH = 6*PARTICLE_SIZE                                          # Maximum radius of the branch
-DOMAIN_DIMENSIONS = [20,20,40]                                 # Dimensions of the domain 
+MIN_THICKNESS_BRANCH = 1.5*PARTICLE_SIZE                                          # Minimum radius of the branch  
+MAX_THICKNESS_BRANCH = 2.5*PARTICLE_SIZE                                          # Maximum radius of the branch
+DOMAIN_DIMENSIONS = [20,20,80]                                 # Dimensions of the domain 
 DOMAIN_PIXELS = [256, 256, 1024]                                     # Number of pixels in binary domain            
-SEED = 212                                                          # Seed for random fractal generation  
-RADIUS_OF_INFLUENCE = 50                                            # Radius of incluence for space colonization algorithm
+SEED = 581263418                                                          # Seed for random fractal generation  
+RADIUS_OF_INFLUENCE = 100                                            # Radius of incluence for space colonization algorithm
 KILL_DISTANCE = 1                                                # Kill distance for space colonization algorithm
-D = 5                                                            # Jump distance D
-GRAV_ALPHA = 0                                                    # Gravitropism (-1 to 1)
+D = 2                                                           # Jump distance D
+GRAV_ALPHA = 1                                                    # Gravitropism 
+HORIZONTAL_FORCING = 1                                            # Horizontal forcing
 CROWN_TYPE = r'CY'                                                # CUBOID (C) or ELLIPSOIDE (E) or CYLINDRICAL (CY)
 SHOWCASE_RESULT = False                                              # Showcase result (T : yes, F: no)
 COORDS_OUT_OF_BOUNDS = True                                           # Should coords out of bounds be allowed (T : yes, F: no)
 SAVE_MATRIX = False                                                   # Save matrix as binary txt file
 SAVE_CONFIG_TXT = True                                               # Save configuration settings as txt file
-SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\taproots\ '                # Saving location
-FILE_NAME = r'taproot_ex2'                                               # Root file name
-CONFIG_FILE_NAME = r'config_tap_ex2'                                      # Configuration file name
-TAP_ROOT_STYLE = True                                            # To generate tap root of main root
+SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\fibrous\ '                # Saving location
+FILE_NAME = r'fibrous_grav_2'                                               # Root file name
+CONFIG_FILE_NAME = r'fibrous_grav_2'                                      # Configuration file name
+TAP_ROOT_STYLE = False                                            # To generate tap root of main root
 SAVE_AS_H5 = True
-
-# gravitropism
-# cylindrical sampling
-# parametrize thickness from radius of sphere
 
 def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
 
@@ -394,11 +388,11 @@ class Simulation:
       z = np.linspace(z_init[0], z_init[1], no_of_division)
       xs = np.random.uniform(-max_dev_x, max_dev_x, no_of_division)
       ys = np.random.uniform(-max_dev_y, max_dev_y, no_of_division)
-      slope = 0.05
+      slope = 0.08
       for i in range(1,no_of_division):
         matrix = bresenham3D(x_init[0]+xs[i-1], x_init[1]+xs[i], y_init[0]+ys[i-1], y_init[1]+ys[i], z[i-1], z[i], int(self.tap_root(ROOT_THICKNESS,slope,z[i-1])), matrix)
-    else:
-       matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], int(ROOT_THICKNESS), matrix)
+    #else:
+       #matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], int(ROOT_THICKNESS), matrix)
     
     matrix = matrix[:,:,::-1]
 
@@ -422,6 +416,7 @@ class Simulation:
             config_file.write("D = {}\n".format(D))
             config_file.write("CROWN_TYPE = {}\n".format(CROWN_TYPE))
             config_file.write("TAP_ROOT_STYLE = {}\n".format(TAP_ROOT_STYLE))
+            config_file.write("HORIZONTAL_FORCING = {}\n".format(HORIZONTAL_FORCING))
             if TAP_ROOT_STYLE:
               config_file.write("MAX_DELTA_X = {}\n".format(max_dev_x))
               config_file.write("MAX_DELTA_Y = {}\n".format(max_dev_y))
@@ -486,9 +481,10 @@ class Simulation:
         # find new node pos
         n = np.array([0, 0, 0], dtype=float)
         for attr_pt in S_v:
-          n += (attr_pt.pos - node.pos) / np.linalg.norm(attr_pt.pos - node.pos)
-        
-        n = n / np.linalg.norm(n) + GRAV_ALPHA*np.array([0,0,1]) 
+          n_c = (attr_pt.pos - node.pos) / np.linalg.norm(attr_pt.pos - node.pos)
+          n += n_c + GRAV_ALPHA*np.array([0,0,1]) + HORIZONTAL_FORCING*np.array([np.random.rand(), np.random.rand(), 0])
+
+        n = n / np.linalg.norm(n)
 
         new_pos = node.pos + n * self.D
         new_node = Tree_node(new_pos[0], new_pos[1], new_pos[2])
@@ -506,19 +502,19 @@ def run_experiment_cuboid_crown_1():
   np.random.seed(SEED)
 
   global x_min, x_max, y_min, y_max, z_min, z_max, no_of_points
-  no_of_points = 100
-  x_min = -1/8*DOMAIN_DIMENSIONS[0]
-  x_max = 1/8*DOMAIN_DIMENSIONS[0]
-  y_min = -1/8*DOMAIN_DIMENSIONS[1]
-  y_max = 1/8*DOMAIN_DIMENSIONS[1]
-  z_min = ROOT_END[2]
-  z_max = DOMAIN_DIMENSIONS[2]*3/4
+  no_of_points = 400
+  x_min = -8
+  x_max = 8
+  y_min = -8
+  y_max = 8
+  z_min = 0
+  z_max = DOMAIN_DIMENSIONS[2]//2
 
   x_coords = np.random.uniform(x_min, x_max, no_of_points)
   y_coords = np.random.uniform(y_min, y_max, no_of_points)
   z_coords = np.random.uniform(z_min, z_max, no_of_points)
 
-  sim = Simulation(crown_attractiosn_points=(x_coords, y_coords, z_coords), radius_of_influence = RADIUS_OF_INFLUENCE, kill_distance = KILL_DISTANCE, D = D)
+  sim = Simulation(crown_attraction_points=(x_coords, y_coords, z_coords), radius_of_influence = RADIUS_OF_INFLUENCE, kill_distance = KILL_DISTANCE, D = D)
   sim.run(NO_OF_ITERATIONS)
 
 def run_experiment_ellispe_crown_1():
@@ -571,14 +567,11 @@ def run_cylindrical():
     
   global no_of_points, z_min, z_max, r_inner, r_outer
 
-  # justera tills den ligger innanför området
-  # få bort redunant roots
-  # justera så vi får lite mer branching med lite mindre rötter till radien också
-  no_of_points = 50
-  z_min = 1/4*ROOT_END[2]
-  z_max = 5/4 * ROOT_END[2]
-  r_inner = 2*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
-  r_outer = 2.5*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
+  no_of_points = 250
+  z_min = 0*ROOT_END[2]
+  z_max = ROOT_END[2]
+  r_inner = 0*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
+  r_outer = 3*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
   r = np.random.uniform(r_inner, r_outer, no_of_points)
   theta = np.random.uniform(0, 2*np.pi, no_of_points)
   z = np.random.uniform(z_min, z_max, no_of_points)
@@ -593,9 +586,13 @@ def run_cylindrical():
   sim = Simulation(crown_attraction_points=(x, y, z), radius_of_influence = RADIUS_OF_INFLUENCE, kill_distance = KILL_DISTANCE, D = D)
   sim.run(NO_OF_ITERATIONS)
 
+
 if CROWN_TYPE == 'C':
   run_experiment_cuboid_crown_1() 
 elif CROWN_TYPE == 'E':
   run_experiment_ellispe_crown_1()
 elif CROWN_TYPE == 'CY':
   run_cylindrical()
+
+
+# add a fcn so that one can read in the config file and replace values in code and just rerun case directly 
