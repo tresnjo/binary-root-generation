@@ -1,39 +1,59 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import random
 from mpl_toolkits.mplot3d import Axes3D
 import os
 import h5py 
+from scipy.signal import convolve
 
-### Configuration Options ###
+########################################################
+#########       CONFIGURATION OPTIONS       ############
+########################################################
+
+''' GEOMETRY OPTIONS'''
 NO_OF_ITERATIONS = 50                                             # No iterations
-PARTICLE_SIZE = 5                                                 # Specify in relation to pixels
+PARTICLE_SIZE = 2                                                # Specify in relation to pixels
 ROOT_START = [0,0,0]                                                # Start of main root
 ROOT_END = [0,0,40]                                                 # End of main root in terms
-ROOT_THICKNESS = 10*PARTICLE_SIZE                                                  # Speficication of main root radius
-MIN_THICKNESS_BRANCH = 1.5*PARTICLE_SIZE                                          # Minimum radius of the branch  
-MAX_THICKNESS_BRANCH = 2.5*PARTICLE_SIZE                                          # Maximum radius of the branch
+ROOT_THICKNESS = 1*PARTICLE_SIZE                                                  # Speficication of main root radius
+MIN_THICKNESS_BRANCH = 2*PARTICLE_SIZE                                          # Minimum radius of the branch  
+MAX_THICKNESS_BRANCH = 3*PARTICLE_SIZE                                          # Maximum radius of the branch
 DOMAIN_DIMENSIONS = [20,20,80]                                 # Dimensions of the domain 
-DOMAIN_PIXELS = [256, 256, 1024]                                     # Number of pixels in binary domain            
-SEED = 581263418                                                          # Seed for random fractal generation  
+DOMAIN_PIXELS = [40, 40, 80]                                     # Number of pixels in binary domain            
+
+''' SPACE COLONIZATION OPTIONS'''
 RADIUS_OF_INFLUENCE = 100                                            # Radius of incluence for space colonization algorithm
 KILL_DISTANCE = 1                                                # Kill distance for space colonization algorithm
 D = 2                                                           # Jump distance D
-GRAV_ALPHA = 1                                                    # Gravitropism 
-HORIZONTAL_FORCING = 1                                            # Horizontal forcing
+GRAV_ALPHA = 0                                                    # Gravitropism 
+HORIZONTAL_FORCING = 0                                            # Horizontal forcing
+
+''' DISTRIBUTION AND ROOT TYPE'''
 CROWN_TYPE = r'CY'                                                # CUBOID (C) or ELLIPSOIDE (E) or CYLINDRICAL (CY)
+TAP_ROOT_STYLE = False                                            # To generate tap root of main root
+
+''' OTHER OPTIONS'''
+VOLUME_THRESHOLD = 1e6                                            # Maximum number of voxels
 SHOWCASE_RESULT = False                                              # Showcase result (T : yes, F: no)
 COORDS_OUT_OF_BOUNDS = True                                           # Should coords out of bounds be allowed (T : yes, F: no)
-SAVE_MATRIX = False                                                   # Save matrix as binary txt file
+SEED = 21                                                          # Seed for random root generation  
+
+""" SAVING OPTIONS """
+SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\taproots\ '                # Saving location
+FILE_NAME = r'test_surf_vol'                                               # Root txt and h5 file name
+CONFIG_FILE_NAME = r'test_surf_vol'                                      # Configuration txt file name
+SAVE_AS_TXT = False                                                   # Save matrix as binary txt file
+SAVE_AS_H5 = True                                                     # Save matrix as H5 file
 SAVE_CONFIG_TXT = True                                               # Save configuration settings as txt file
-SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\fibrous\ '                # Saving location
-FILE_NAME = r'fibrous_grav_2'                                               # Root file name
-CONFIG_FILE_NAME = r'fibrous_grav_2'                                      # Configuration file name
-TAP_ROOT_STYLE = False                                            # To generate tap root of main root
-SAVE_AS_H5 = True
+
+
+########################################################
+#######       BRESENHAMS 3D LINE ALGORITHM       #######
+########################################################
 
 def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
+
+    voxel_count = 0
 
     # Rounding all coordinates to nearest integer 
     x1, x2 =int(round(x1)), int(round(x2))
@@ -69,14 +89,16 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                         break
                       else:
                         matrix[y1][x1][z1] = 1
+                        voxel_count += 1
                     else:
                         for y_th in range(0, 2*th+1):
                             max_t_z = int(np.sqrt(th**2-(y_th-th)**2))
                             for z_th in range(0,2*max_t_z+1):
-                                if y1 - th + y_th >= DOMAIN_PIXELS[0] or y1 - th + y_th >= DOMAIN_PIXELS[0] < 0 or z1-max_t_z+z_th >= DOMAIN_PIXELS[2] or z1-max_t_z+z_th < 0:
+                                if y1 - th + y_th >= DOMAIN_PIXELS[0] or y1 - th + y_th < 0 or z1-max_t_z+z_th >= DOMAIN_PIXELS[2] or z1-max_t_z+z_th < 0:
                                    break
                                 else:
                                   matrix[y1-th+y_th][x1][z1-max_t_z+z_th] = 1
+                                  voxel_count += 1
 
                 
                 if (p1 >= 0):
@@ -106,6 +128,7 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                         break
                       else:
                         matrix[y1][x1][z1] = 1
+                        voxel_count += 1 
                     else:
                         for x_th in range(0, 2*th+1):
                             max_t_z = int(np.sqrt(th**2-(x_th-th)**2))
@@ -114,6 +137,7 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                                    break
                                 else:
                                   matrix[y1][x1-th+x_th][z1-max_t_z+z_th] = 1
+                                  voxel_count +=1
                 if (p1 >= 0):
                     x1 += xs
                     p1 -= dy_2
@@ -139,6 +163,7 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                        break
                     else:
                       matrix[y1][x1][z1] = 1
+                      voxel_count += 1
                 else:
                     for x_th in range(0, 2*th+1):
                         max_t_y = int(np.sqrt(th**2-(x_th-th)**2))
@@ -147,6 +172,7 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
                                break
                             else:
                               matrix[y1-max_t_y + y_th][x1-th+x_th][z1] = 1
+                              voxel_count +=1 
             if (p1 >= 0):
                 y1 += ys
                 p1 -= dz_2
@@ -157,7 +183,11 @@ def bresenham3D(x1, x2, y1, y2, z1, z2, th, matrix):
             p2 += dx_2
             z1 += zs
 
-    return matrix
+    return matrix, voxel_count
+
+########################################################
+#######       SPACE COLONIZATION ALGORITHM       #######
+########################################################
 
 class Tree_node:
   def __init__(self, pos_x, pos_y, pos_z):
@@ -240,6 +270,23 @@ class Tree:
 class Simulation:
   def __init__(self, crown_attraction_points, radius_of_influence, kill_distance, D):
 
+    self.acc_pixels = 0
+    self.surf_pixels = 0
+    self.filter3d = np.array([
+                              [[0, 0, 0],    
+                               [0, 1, 0],
+                               [0, 0, 0]],
+
+                              [[0, 1, 0],
+                               [1 ,0, 1],
+                               [0, 1, 0]],
+
+                              [[0, 0, 0],
+                               [0, 1, 0],
+                               [0, 0, 0]]
+                              ]
+                           )
+
     self.d_i = radius_of_influence
     self.d_k = kill_distance
     self.D = D
@@ -269,7 +316,12 @@ class Simulation:
     self.brach_min_width = MIN_THICKNESS_BRANCH
     self.branch_width = {}
 
-
+  # calculating the surface area using convolution of filter
+  def count_surface_area(self, matrix):
+      mask = convolve(matrix, self.filter3d, mode = 'same')
+      boundaries = np.logical_and(mask > 0, mask < 6)
+      self.surf_pixels = np.sum(matrix[boundaries])
+  
   def _update_closest_node(self, node):
     kill_candidates = []
 
@@ -290,6 +342,7 @@ class Simulation:
       del self.closest_dist[attr_pt]
  
 
+  # report function 
   def _report(self):
     print(f'\tREPORT FOR ITERATION {self.iter_num}')
     print('Number of nodes:', len(self.nodes))
@@ -312,7 +365,7 @@ class Simulation:
     plt.show()
 
 
-  def branch_thinkness(self, node):
+  def branch_thickness(self, node):
     if node in self.branch_width:
       return self.branch_width[node]
 
@@ -321,18 +374,17 @@ class Simulation:
       return self.brach_min_width
     
     if self.branching_tree.num_children(node) == 1:
-      w = self.branch_thinkness(self.branching_tree.get_children(node)[0])
+      w = self.branch_thickness(self.branching_tree.get_children(node)[0])
       self.branch_width[node] = w
       return w
 
     w = 0
     for child in self.branching_tree.get_children(node):
-      w += np.square(self.branch_thinkness(child))
+      w += np.square(self.branch_thickness(child))
     w = np.sqrt(w)
 
     self.branch_width[node] = w
     return w
-
 
   def run(self, num_iteration):
 
@@ -341,7 +393,7 @@ class Simulation:
 
       if len(self.closest_node) == 0:
         break
-
+    
     self._report()
     self.render_results()
 
@@ -366,96 +418,135 @@ class Simulation:
 
     for branch in self.branches:
        start, end, node = branch
-       lw = self.branch_thinkness(node)
+       lw = self.branch_thickness(node)
        if lw > max_th:
           max_th = lw
 
     for branch in self.branches:
       start, end, node = branch
 
-      lw = self.branch_thinkness(node)
+      lw = self.branch_thickness(node)
       x = np.array([start[0], end[0]])/delta_x + DOMAIN_PIXELS[0]//2
       y = np.array([start[1], end[1]])/delta_y+ DOMAIN_PIXELS[1]//2
       z = np.array([start[2], end[2]])/delta_z 
 
-      matrix = bresenham3D(x[0], x[1], y[0], y[1], z[0], z[1], int(MIN_THICKNESS_BRANCH + (MAX_THICKNESS_BRANCH - MIN_THICKNESS_BRANCH)*lw/max_th), matrix)
-
+      if self.acc_pixels < VOLUME_THRESHOLD:
+        matrix, new_pixels = bresenham3D(x[0], x[1], y[0], y[1], z[0], z[1], int(MIN_THICKNESS_BRANCH + (MAX_THICKNESS_BRANCH - MIN_THICKNESS_BRANCH)*lw/max_th), matrix)
+        self.acc_pixels += new_pixels
+      else:
+        print("\nVolume threshold exceeded.")
+        break
+    
     if TAP_ROOT_STYLE:
       global max_dev_x, max_dev_y, no_of_division, slope
-      max_dev_x = 20
-      max_dev_y = 20
+
+      max_dev_x = 15
+      max_dev_y = 15
       no_of_division = 15
+      slope = 0.08
+
       z = np.linspace(z_init[0], z_init[1], no_of_division)
       xs = np.random.uniform(-max_dev_x, max_dev_x, no_of_division)
       ys = np.random.uniform(-max_dev_y, max_dev_y, no_of_division)
-      slope = 0.08
+
       for i in range(1,no_of_division):
-        matrix = bresenham3D(x_init[0]+xs[i-1], x_init[1]+xs[i], y_init[0]+ys[i-1], y_init[1]+ys[i], z[i-1], z[i], int(self.tap_root(ROOT_THICKNESS,slope,z[i-1])), matrix)
-    #else:
-       #matrix = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], int(ROOT_THICKNESS), matrix)
+        if self.acc_pixels < VOLUME_THRESHOLD:
+          matrix, new_pixels = bresenham3D(x_init[0]+xs[i-1], x_init[1]+xs[i], y_init[0]+ys[i-1], y_init[1]+ys[i], z[i-1], z[i], int(self.tap_root(ROOT_THICKNESS,slope,z[i-1])), matrix)
+          self.acc_pixels += new_pixels
+        else:
+           print("\nVolume threshold exceeded.")
+           break
+    else:
+      if self.acc_pixels < VOLUME_THRESHOLD:
+        matrix, new_pixels = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], int(ROOT_THICKNESS), matrix)
+        self.acc_pixels += new_pixels
+      else:
+        print("\nVolume threshold exceeded.")
     
     matrix = matrix[:,:,::-1]
+    self.count_surface_area(matrix)
 
-    if SAVE_MATRIX:
+    if SAVE_AS_TXT:
       save_path = self.save_file(f"{SAVE_LOCATION}{FILE_NAME}.txt", FILE_NAME, type = "txt")
       np.savetxt(save_path, matrix.flatten().astype(int), fmt = '%.0f')
+      print("\nMatrix txt-file successfully created at {}".format(save_path))
 
     if SAVE_CONFIG_TXT:
       config_file_path = self.save_file(f"{SAVE_LOCATION}{CONFIG_FILE_NAME}.txt", CONFIG_FILE_NAME, type = "txt")
-      print(config_file_path)
       with open(config_file_path, 'w') as config_file:
+            
+            config_file.write("#### CONFIGURATION SETTINGS #### \n")
             config_file.write("ROOT_START = {}\n".format(ROOT_START))
             config_file.write("ROOT_END = {}\n".format(ROOT_END))
             config_file.write("GRAVITROPISM = {}\n".format(GRAV_ALPHA))
             config_file.write("MIN_THICKNESS_BRANCH = {}\n".format(MIN_THICKNESS_BRANCH))
+            config_file.write("MAX_THICKNESS_BRANCH = {}\n".format(MAX_THICKNESS_BRANCH))
             config_file.write("DOMAIN_DIMENSIONS = {}\n".format(DOMAIN_DIMENSIONS))
             config_file.write("DOMAIN_PIXELS = {}\n".format(DOMAIN_PIXELS))
             config_file.write("SEED = {}\n".format(SEED))
             config_file.write("RADIUS_OF_INFLUENCE = {}\n".format(RADIUS_OF_INFLUENCE))
             config_file.write("KILL_DISTANCE = {}\n".format(KILL_DISTANCE))
             config_file.write("D = {}\n".format(D))
-            config_file.write("CROWN_TYPE = {}\n".format(CROWN_TYPE))
             config_file.write("TAP_ROOT_STYLE = {}\n".format(TAP_ROOT_STYLE))
             config_file.write("HORIZONTAL_FORCING = {}\n".format(HORIZONTAL_FORCING))
+            config_file.write("VOLUME_THRESHOLD = {}\n".format(VOLUME_THRESHOLD))
+
+            config_file.write("#### RESULTS #### \n")
+            config_file.write("VOL_PIXELS = {}\n".format(self.acc_pixels))
+            config_file.write("SURF_VOL_PIXELS = {}\n".format(self.surf_pixels))
+            config_file.write("POROSITY = {}\n".format(self.acc_pixels/(DOMAIN_PIXELS[0]*DOMAIN_PIXELS[1]*DOMAIN_PIXELS[2])))
+
             if TAP_ROOT_STYLE:
+              config_file.write("#### TAPROOT SETTINGS #### \n")
               config_file.write("MAX_DELTA_X = {}\n".format(max_dev_x))
               config_file.write("MAX_DELTA_Y = {}\n".format(max_dev_y))
               config_file.write("NO_OF_DIVS = {}\n".format(no_of_division))
               config_file.write("SLOPE = {}\n".format(slope))
+            
+            config_file.write("#### DISTRIBUTION SETTINGS #### \n")
+            
             if CROWN_TYPE == 'C':
+              config_file.write("CROWN_TYPE = {}\n".format(CROWN_TYPE))
               config_file.write("x_min, x_max = {}\n".format([x_min,x_max]))
               config_file.write("y_min, y_max = {}\n".format([y_min,y_max]))
               config_file.write("z_min, z_max = {}\n".format([z_min,z_max]))
               config_file.write("no_of_points = {}\n".format(no_of_points))
             elif CROWN_TYPE == 'E':
+              config_file.write("CROWN_TYPE = {}\n".format(CROWN_TYPE))
               config_file.write("mean = {}\n".format(mean))
               config_file.write("cov = {}\n".format(cov))
               config_file.write("t_x, t_y, t_z = {}\n".format([t_x,t_y,t_z]))
               config_file.write("no_of_points = {}\n".format(no_of_points))
               config_file.write("r = {}\n".format(r))
             elif CROWN_TYPE == 'CY':
+              config_file.write("CROWN_TYPE = {}\n".format(CROWN_TYPE))
               config_file.write("no_of_points = {}\n".format(no_of_points))
               config_file.write("z_min, z_max = {}\n".format([z_min,z_max]))
               config_file.write("r_inner, r_outer = {}\n".format([r_inner,r_outer]))
 
+      print("\nConfiguration file successfully created at {}".format(config_file))
+
     if SAVE_AS_H5:
       save_path_h5 = self.save_file(f"{SAVE_LOCATION}{FILE_NAME}.h5", FILE_NAME, type = "h5")
-      print(save_path_h5)
       with h5py.File(save_path_h5, 'w') as hf:
           hf.create_dataset("root",  data=matrix)
-      return
+      print("\nH5-file successfully created at {}".format(save_path_h5))
+      
           
     if SHOWCASE_RESULT:
-      print("OK")
       ax.invert_xaxis()
       ax.voxels(matrix, facecolor = 'brown', edgecolor = 
               'black', alpha = 0.9, linewidth = 0.5, shade=None)
       ax.set_box_aspect((1,DOMAIN_DIMENSIONS[1]//DOMAIN_DIMENSIONS[0],DOMAIN_DIMENSIONS[2]//DOMAIN_DIMENSIONS[0]))
-      plt.show()  
-     
+      plt.show()
+
+    return  
+  
+  # taproot linear function for thickness as function of depth
   def tap_root(self, m, k, z):
      return m - k * z
   
+  # iterating over saving paths
   def save_file(self,save_path, filename, type):
     if os.path.exists(save_path):
         i = 1
@@ -466,6 +557,7 @@ class Simulation:
               break
           i += 1
     return save_path
+  
   def _iter(self):
 
     self.iter_num += 1
@@ -474,7 +566,6 @@ class Simulation:
     for node in self.nodes:
       # find set of attraction pts affecting node
       S_v = {attr_pt for attr_pt in self.closest_node if self.closest_node[attr_pt] == node}
-
 
       # if set is not empty, add new node
       if len(S_v) != 0:
@@ -498,7 +589,12 @@ class Simulation:
     # add newly added nodes
     self.nodes.extend(meta_nodes)
 
-def run_experiment_cuboid_crown_1():
+
+########################################################
+#######       VARIOUS SPACE DISTRIBUTIONS       ########
+########################################################
+
+def run_cuboid():
   np.random.seed(SEED)
 
   global x_min, x_max, y_min, y_max, z_min, z_max, no_of_points
@@ -517,13 +613,12 @@ def run_experiment_cuboid_crown_1():
   sim = Simulation(crown_attraction_points=(x_coords, y_coords, z_coords), radius_of_influence = RADIUS_OF_INFLUENCE, kill_distance = KILL_DISTANCE, D = D)
   sim.run(NO_OF_ITERATIONS)
 
-def run_experiment_ellispe_crown_1():
+def run_ellipsoid():
   
   np.random.seed(SEED)
   
   fig = plt.figure()
   ax = fig.add_subplot(projection='3d')
-
 
   global mean, cov, t_x, t_y, t_z, no_of_points, r
 
@@ -557,7 +652,6 @@ def run_experiment_ellispe_crown_1():
 
   del sim
    
-
 def run_cylindrical():
 
   np.random.seed(SEED)
@@ -567,7 +661,7 @@ def run_cylindrical():
     
   global no_of_points, z_min, z_max, r_inner, r_outer
 
-  no_of_points = 250
+  no_of_points = 0
   z_min = 0*ROOT_END[2]
   z_max = ROOT_END[2]
   r_inner = 0*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
@@ -586,13 +680,9 @@ def run_cylindrical():
   sim = Simulation(crown_attraction_points=(x, y, z), radius_of_influence = RADIUS_OF_INFLUENCE, kill_distance = KILL_DISTANCE, D = D)
   sim.run(NO_OF_ITERATIONS)
 
-
 if CROWN_TYPE == 'C':
-  run_experiment_cuboid_crown_1() 
+  run_cuboid() 
 elif CROWN_TYPE == 'E':
-  run_experiment_ellispe_crown_1()
+  run_ellipsoid()
 elif CROWN_TYPE == 'CY':
   run_cylindrical()
-
-
-# add a fcn so that one can read in the config file and replace values in code and just rerun case directly 
