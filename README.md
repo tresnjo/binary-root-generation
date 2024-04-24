@@ -1,2 +1,2 @@
-# binary-fractal-tree
-Binary Fractal Tree
+# binary-root-generation
+This repository is still under construction, more instructions will be published soon
