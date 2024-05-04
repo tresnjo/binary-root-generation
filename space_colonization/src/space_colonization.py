@@ -13,28 +13,30 @@ from skan import Skeleton, summarize
 
 ''' GEOMETRY OPTIONS'''
 NO_OF_ITERATIONS = 50                                             # No iterations
-PARTICLE_SIZE = 5                                                # Specify in relation to pixels
+PARTICLE_SIZE = 0.8*256//20                                                # Specify in relation to pixels
 ROOT_START = [0,0,0]                                                # Start of main root
 ROOT_END = [0,0,40]                                                 # End of main root in terms
-ROOT_THICKNESS = 6*PARTICLE_SIZE                                                  # Speficication of main root radius
-MIN_THICKNESS_BRANCH = 1.5*PARTICLE_SIZE                                          # Minimum radius of the branch  
-MAX_THICKNESS_BRANCH = 4*PARTICLE_SIZE                                          # Maximum radius of the branch
+ROOT_THICKNESS = 5*PARTICLE_SIZE                                                  # Speficication of main root radius
+MIN_THICKNESS_BRANCH = 1/2*PARTICLE_SIZE                                          # Minimum radius of the branch  
+MAX_THICKNESS_BRANCH = 1*PARTICLE_SIZE                                          # Maximum radius of the branch
 DOMAIN_DIMENSIONS = [20,20,80]                                 # Dimensions of the domain 
-DOMAIN_PIXELS = [20, 20, 40]                                     # Number of pixels in binary domain            
+DOMAIN_PIXELS = [256, 256, 1024]                                     # Number of pixels in binary domain            
 
 ''' SPACE COLONIZATION OPTIONS'''
 RADIUS_OF_INFLUENCE = 100                                            # Radius of influence for space colonization algorithm
 KILL_DISTANCE = 1                                                # Kill distance for space colonization algorithm
 D = 2                                                           # Jump distance D
-GRAV_ALPHA = 1                                                    # Gravitropism 
-HORIZONTAL_FORCING = 0                                            # Horizontal forcing
+GRAV_ALPHA = 0.4                                                    # Gravitropism 
+HORIZONTAL_FORCING = 0.4                                            # Horizontal forcing
+K_GRAV = 2                                                         # Exponential increase of gravitation with depth
+K_HORIZONTAL = 5                                                    # Exponential decrease of horizontal force with depth
 
 ''' DISTRIBUTION AND ROOT TYPE'''
 CROWN_TYPE = r'CY'                                                # CUBOID (C) or ELLIPSOIDE (E) or CYLINDRICAL (CY)
 TAP_ROOT_STYLE = False                                            # To generate tap root of main root
 
 """ SAVING OPTIONS """
-SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\taproots\ '                # Saving location
+SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\github\ '                # Saving location
 FILE_NAME = r'test'                                               # Root txt and h5 file name
 CONFIG_FILE_NAME = r'test'                                      # Configuration txt file name
 SAVE_AS_TXT = False                                                   # Save matrix as binary txt file
@@ -43,9 +45,9 @@ SAVE_CONFIG_TXT = True                                               # Save conf
 
 ''' OTHER OPTIONS'''
 VOLUME_THRESHOLD = 1e8                                            # Maximum number of volume voxels 
-SHOWCASE_RESULT = True                                              # Showcase result (T : yes, F: no)
-SHOW_ANGULAR_DISTRIBUTION = True                                   # Showing angular distribution of root
-SHOWCASE_BRANCHING_SUMMARY = True                                   # Showing branch length distribution of root
+SHOWCASE_RESULT = False                                              # Showcase result (T : yes, F: no)
+SHOW_ANGULAR_DISTRIBUTION = False                                   # Showing angular distribution of root
+SHOWCASE_BRANCHING_SUMMARY = False                                   # Showing branch length distribution of root
 COORDS_OUT_OF_BOUNDS = True                                           # Should coords out of bounds be allowed (T : yes, F: no)
 SEED = 581263418                                                          # Seed for random root generation  
 
@@ -420,8 +422,8 @@ class Simulation:
   def render_results(self):
     
     # initializing matrix from specified pixel dimensions
-    matrix = np.zeros((DOMAIN_PIXELS[0], DOMAIN_PIXELS[1], DOMAIN_PIXELS[2])).astype(int)
-    pseudo_matrix = np.zeros((DOMAIN_PIXELS[0], DOMAIN_PIXELS[1], DOMAIN_PIXELS[2])).astype(int)
+    matrix = np.zeros((DOMAIN_PIXELS[0], DOMAIN_PIXELS[1], DOMAIN_PIXELS[2])).astype(float)
+    pseudo_matrix = np.zeros((DOMAIN_PIXELS[0], DOMAIN_PIXELS[1], DOMAIN_PIXELS[2])).astype(float)
   
     # conversion from domain dimension to pixel dimension
     delta_x = DOMAIN_DIMENSIONS[0]/DOMAIN_PIXELS[0]
@@ -465,7 +467,8 @@ class Simulation:
            break
     else:
       if self.acc_pixels < VOLUME_THRESHOLD:
-        matrix, new_pixels = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], int(ROOT_THICKNESS), matrix)
+        matrix, new_pixels = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], 0, int(ROOT_THICKNESS), matrix)
+        #matrix, new_pixels = bresenham3D(x_init[0], x_init[1], y_init[0], y_init[1], z_init[0], z_init[1], int(ROOT_THICKNESS), matrix)
         self.acc_pixels += new_pixels
       else:
         print("\nVolume threshold exceeded.")
@@ -510,6 +513,7 @@ class Simulation:
             config_file.write("ROOT_END = {}\n".format(ROOT_END))
             config_file.write("ROOT_THICKNESS = {}\n".format(ROOT_THICKNESS))
             config_file.write("GRAVITROPISM = {}\n".format(GRAV_ALPHA))
+            config_file.write("K_GRAVITY = {}\n".format(K_GRAV))
             config_file.write("MIN_THICKNESS_BRANCH = {}\n".format(MIN_THICKNESS_BRANCH))
             config_file.write("MAX_THICKNESS_BRANCH = {}\n".format(MAX_THICKNESS_BRANCH))
             config_file.write("DOMAIN_DIMENSIONS = {}\n".format(DOMAIN_DIMENSIONS))
@@ -520,6 +524,7 @@ class Simulation:
             config_file.write("D = {}\n".format(D))
             config_file.write("TAP_ROOT_STYLE = {}\n".format(TAP_ROOT_STYLE))
             config_file.write("HORIZONTAL_FORCING = {}\n".format(HORIZONTAL_FORCING))
+            config_file.write("K_HORIZONTAL = {}\n".format(K_HORIZONTAL))
             config_file.write("VOLUME_THRESHOLD = {}\n".format(VOLUME_THRESHOLD))
 
             config_file.write("\n#### ROOT RESULTS #### \n")
@@ -627,7 +632,9 @@ class Simulation:
         n = np.array([0, 0, 0], dtype=float)
         for attr_pt in S_v:
           n_c = (attr_pt.pos - node.pos) / np.linalg.norm(attr_pt.pos - node.pos)
-          n += n_c + GRAV_ALPHA*np.array([0,0,1]) + HORIZONTAL_FORCING*np.array([np.random.rand(), np.random.rand(), 0])
+          delta_x_sgn = np.sign(attr_pt.pos[0])
+          delta_y_sgn = np.sign(attr_pt.pos[1])
+          n += n_c + GRAV_ALPHA*np.array([0,0,1])*np.exp(K_GRAV*attr_pt.pos[2]/ROOT_END[2]) + HORIZONTAL_FORCING*np.array([delta_x_sgn*np.random.rand(), delta_y_sgn*np.random.rand(), 0])*np.exp(-K_HORIZONTAL*attr_pt.pos[2]/ROOT_END[2])
 
         n = n / np.linalg.norm(n)
 
@@ -717,11 +724,11 @@ def run_cylindrical():
     
   global no_of_points, z_min, z_max, r_inner, r_outer
 
-  no_of_points = 5
+  no_of_points = 350
   z_min = 0*ROOT_END[2]
   z_max = ROOT_END[2]
-  r_inner = 4#0*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
-  r_outer = 12 #3*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
+  r_inner = 0#0*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
+  r_outer = 10 #3*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
   r = np.random.uniform(r_inner, r_outer, no_of_points)
   theta = np.random.uniform(0, 2*np.pi, no_of_points)
   z = np.random.uniform(z_min, z_max, no_of_points)
