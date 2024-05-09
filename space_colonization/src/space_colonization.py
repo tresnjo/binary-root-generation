@@ -1,4 +1,3 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -11,16 +10,18 @@ from skan import Skeleton, summarize
 #########       CONFIGURATION OPTIONS       ############
 ########################################################
 
+
 ''' GEOMETRY OPTIONS'''
 NO_OF_ITERATIONS = 50                                             # No iterations
-PARTICLE_SIZE = 0.8*256//20                                                # Specify in relation to pixels
+PARTICLE_SIZE = 3                                                # Specify in relation to pixels
 ROOT_START = [0,0,0]                                                # Start of main root
-ROOT_END = [0,0,40]                                                 # End of main root in terms
+ROOT_END = [0,0,30]                                                 # End of main root in terms
 ROOT_THICKNESS = 5*PARTICLE_SIZE                                                  # Speficication of main root radius
 MIN_THICKNESS_BRANCH = 1/2*PARTICLE_SIZE                                          # Minimum radius of the branch  
 MAX_THICKNESS_BRANCH = 1*PARTICLE_SIZE                                          # Maximum radius of the branch
 DOMAIN_DIMENSIONS = [20,20,80]                                 # Dimensions of the domain 
-DOMAIN_PIXELS = [256, 256, 1024]                                     # Number of pixels in binary domain            
+DOMAIN_PIXELS = [20, 20, 40]                                     # Number of pixels in binary domain            
+BUFFER_LAYER = 0                                          # Symmetrical buffer layer (z axis)
 
 ''' SPACE COLONIZATION OPTIONS'''
 RADIUS_OF_INFLUENCE = 100                                            # Radius of influence for space colonization algorithm
@@ -29,23 +30,23 @@ D = 2                                                           # Jump distance 
 GRAV_ALPHA = 0.4                                                    # Gravitropism 
 HORIZONTAL_FORCING = 0.4                                            # Horizontal forcing
 K_GRAV = 2                                                         # Exponential increase of gravitation with depth
-K_HORIZONTAL = 5                                                    # Exponential decrease of horizontal force with depth
+K_HORIZONTAL = 4                                                    # Exponential decrease of horizontal force with depth
 
 ''' DISTRIBUTION AND ROOT TYPE'''
 CROWN_TYPE = r'CY'                                                # CUBOID (C) or ELLIPSOIDE (E) or CYLINDRICAL (CY)
 TAP_ROOT_STYLE = False                                            # To generate tap root of main root
 
 """ SAVING OPTIONS """
-SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\github\ '                # Saving location
-FILE_NAME = r'test'                                               # Root txt and h5 file name
-CONFIG_FILE_NAME = r'test'                                      # Configuration txt file name
+SAVE_LOCATION = r'C:\Users\amirt\Desktop\RA\Fractal\Configs\ '                # Saving location
+FILE_NAME = r'nobuff'                                               # Root txt and h5 file name
+CONFIG_FILE_NAME = r'buffer_test'                                      # Configuration txt file name
 SAVE_AS_TXT = False                                                   # Save matrix as binary txt file
 SAVE_AS_H5 = True                                                     # Save matrix, polar and azimuthal as H5 file 
-SAVE_CONFIG_TXT = True                                               # Save configuration settings as txt file
+SAVE_CONFIG_TXT = False                                               # Save configuration settings as txt file
 
 ''' OTHER OPTIONS'''
 VOLUME_THRESHOLD = 1e8                                            # Maximum number of volume voxels 
-SHOWCASE_RESULT = False                                              # Showcase result (T : yes, F: no)
+SHOWCASE_RESULT = True                                              # Showcase result (T : yes, F: no)
 SHOW_ANGULAR_DISTRIBUTION = False                                   # Showing angular distribution of root
 SHOWCASE_BRANCHING_SUMMARY = False                                   # Showing branch length distribution of root
 COORDS_OUT_OF_BOUNDS = True                                           # Should coords out of bounds be allowed (T : yes, F: no)
@@ -488,14 +489,21 @@ class Simulation:
       else:
         print("\nVolume threshold exceeded.")
         break
-    
-    # inverting matrix for root generation
-    matrix = matrix[:,:,::-1]
-    pseudo_matrix = pseudo_matrix[:,:,::-1]
 
     # calculating number of surface voxels
     self.count_surface_area(matrix)
     branching_data = self.branching_summary(pseudo_matrix, delta_x, delta_y, delta_z)
+
+    # adding buffer layer
+    buffer_matrix = np.zeros((DOMAIN_PIXELS[0], DOMAIN_PIXELS[1], BUFFER_LAYER))
+    matrix = np.concatenate((matrix, buffer_matrix), axis = 2)
+
+    # inverting matrix
+    matrix = matrix[:,:,::-1]
+    pseudo_matrix = pseudo_matrix[:,:,::-1]
+
+    # adding second buffer layer
+    matrix = np.concatenate((matrix, buffer_matrix), axis = 2)
 
     # saving the matrix as a binary txt file
     if SAVE_AS_TXT:
@@ -518,6 +526,7 @@ class Simulation:
             config_file.write("MAX_THICKNESS_BRANCH = {}\n".format(MAX_THICKNESS_BRANCH))
             config_file.write("DOMAIN_DIMENSIONS = {}\n".format(DOMAIN_DIMENSIONS))
             config_file.write("DOMAIN_PIXELS = {}\n".format(DOMAIN_PIXELS))
+            config_file.write("BUFFER_LAYER = {}\n".format(BUFFER_LAYER))
             config_file.write("SEED = {}\n".format(SEED))
             config_file.write("RADIUS_OF_INFLUENCE = {}\n".format(RADIUS_OF_INFLUENCE))
             config_file.write("KILL_DISTANCE = {}\n".format(KILL_DISTANCE))
@@ -724,7 +733,7 @@ def run_cylindrical():
     
   global no_of_points, z_min, z_max, r_inner, r_outer
 
-  no_of_points = 350
+  no_of_points = 20
   z_min = 0*ROOT_END[2]
   z_max = ROOT_END[2]
   r_inner = 0#0*ROOT_THICKNESS/DOMAIN_PIXELS[0] * DOMAIN_DIMENSIONS[0]
