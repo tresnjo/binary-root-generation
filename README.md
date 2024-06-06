@@ -8,7 +8,6 @@ The roots/trees are generated over a binary 3D grid. The intent of this project 
 - [Installation](#installation)
 - [Usage and tips](#usage-and-tips)
 - [Examples](#examples)
-- [License](#license)
 
 ## Installation
 In order to run the code, the user will need to supply themselves with the following packages:
@@ -54,4 +53,3 @@ This chapter shows some examples of roots that have been generated using the pro
 </p>
 
 
-## License
