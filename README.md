@@ -30,7 +30,7 @@ This chapter shows some examples of roots that have been generated using the pro
    <img src="https://github.com/tresnjo/binary-root-generation/assets/121384892/5c8a2321-b367-4d09-9ebe-58c325fa14e7" alt="Image 1" style="max-width:100%;">
 </p>
 <p align="center">
-        <em>A flower like structure.</em>
+        <em>A bush like structure.</em>
 </p>
 <p align="center">
    <img src="https://github.com/tresnjo/binary-root-generation/assets/121384892/27a07d18-2b71-4d29-87f3-8e39da1747fa" alt="Image 1" style="max-width:100%;">
