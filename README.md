@@ -24,7 +24,7 @@ The user can also specify whether they want save it as an H5 which has becoming 
 The second and final step just involves running the main simulation scipt ```main.py```. If wished, one might output the configuration txt file which saves the information from the  ```config.py``` so that one can recreate the exact root/tree in the future. It also contains information such as the number of surface and volume voxels, and surface-to-volume ratio, and other parameters that might be of interest.
 
 ## Examples
-This chapter shows some examples of roots that have been generated using the provided code.
+This chapter shows some examples of roots that have been generated using the provided code. The examples together with the configuration files for the settings can be found under the directory  ```examples```. Note that these configuration files are quite old so they might be missing new features that have been added to the configuration file. 
 
 <p align="center">
    <img src="https://github.com/tresnjo/binary-root-generation/assets/121384892/5c8a2321-b367-4d09-9ebe-58c325fa14e7" alt="Image 1" style="max-width:100%;">
