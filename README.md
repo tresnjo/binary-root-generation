@@ -14,11 +14,11 @@ In order to run the code, the user will need to supply themselves with the follo
 - numpy, scipy, matplotlib, h5py, os, skan
 
 ## Usage and tips
-First configure the parameters in ```config.py```. In the config.py file, one specifies settings such as the root thickness, the number of points sampled in the space colonization algorithm, the domain size in pixels, and much more. There's great variability that can be extracted from this code, so I suggest the user plays around with the parameters themselves.
+First configure the parameters in ```config.py```. In the config.py file, one specifies settings such as the root thickness, the number of points sampled in the space colonization algorithm, the domain size in pixels, and much more. There's great variability that can be extracted from this code, so I suggest the user plays around with the parameters themselves. See [Examples](#examples) to study some of the possible geometries that have been generated. 
 
 The ```utils.py``` come with three defined crown types, these are: ellipsoidal, cylindrical and cuboid. The crown types are used for sampling points that are later used in the space colonization algorithm. By choosing different crown types, one can tailor the shape of the root/tree. The user can of course implement new crown types if they are interested. 
 
-The user can also specify whether they want save it as an H5 which has becoming increasingly popular in recent times. For larger domain sizes that are hard to visualize using matplotlib's voxel plot, I suggest the user to install ```VisIt```, see [VisIt installation Guide](https://visit-sphinx-github-user-manual.readthedocs.io/en/v3.2.0/gui_manual/Intro/Installing_VisIt.html).
+The user can also specify whether they want save it as an H5 which has becoming increasingly popular in recent times. For larger domain sizes that are strenuous to visualize using matplotlib's voxel plot, I suggest the user to install ```VisIt```, see [VisIt Installation Guide](https://visit-sphinx-github-user-manual.readthedocs.io/en/v3.2.0/gui_manual/Intro/Installing_VisIt.html).
 
 The second and final step just involves running the main simulation scipt ```main.py```. If wished, one might output the configuration txt file which saves the information from the  ```config.py``` so that one can recreate the exact root/tree in the future. It also contains information such as the number of surface and volume voxels, and surface-to-volume ratio, and other parameters that might be of interest.
 
